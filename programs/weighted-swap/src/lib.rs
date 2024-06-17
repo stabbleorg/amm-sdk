@@ -16,6 +16,7 @@ use rust_decimal::Decimal;
 use spl_associated_token_account::get_associated_token_address;
 use spl_token::{solana_program::program_pack::Pack, state::Account as TokenAccount};
 use stabble_vault::pda::get_vault_authority_address;
+use std::str::FromStr;
 
 declare_id!("swapFpHZwjELNnjvThjajtiVmkz3yPQEHjLtka2fwHW");
 
@@ -39,10 +40,14 @@ impl Amm for WeightedSwap {
     fn from_keyed_account(keyed_account: &KeyedAccount, _amm_context: &AmmContext) -> Result<Self> {
         let state = Pool::try_deserialize(&mut &keyed_account.account.data[..]).unwrap();
 
+        // beneficiary address should be loaded by pool.vault
+        let value = keyed_account.params.as_ref().unwrap();
+        let beneficiary = Pubkey::from_str(value.as_str().unwrap()).unwrap();
+
         Ok(Self {
             key: keyed_account.key,
             state,
-            beneficiary: keyed_account.key, // TODO: load vault account from state.vault
+            beneficiary,
         })
     }
 
@@ -107,15 +112,15 @@ impl Amm for WeightedSwap {
             token_transfer_authority,
             source_token_account,
             destination_token_account,
+            source_mint,
+            destination_mint,
             ..
         } = swap_params;
 
         let vault_authority = get_vault_authority_address(&self.state.vault);
-        let vault_source_token_account = get_associated_token_address(&vault_authority, &swap_params.source_mint);
-        let vault_destination_token_account =
-            get_associated_token_address(&vault_authority, &swap_params.destination_mint);
-        let beneficiary_destination_token_account =
-            get_associated_token_address(&self.beneficiary, &swap_params.destination_mint);
+        let vault_source_token_account = get_associated_token_address(&vault_authority, &source_mint);
+        let vault_destination_token_account = get_associated_token_address(&vault_authority, &destination_mint);
+        let beneficiary_destination_token_account = get_associated_token_address(&self.beneficiary, &destination_mint);
 
         Ok(SwapAndAccountMetas {
             swap: Swap::TokenSwap, // StabbleWeightedSWap
