@@ -124,6 +124,8 @@ impl Amm for StableSwap {
         let vault_source_token_account = get_associated_token_address(&vault_authority, &swap_params.source_mint);
         let vault_destination_token_account =
             get_associated_token_address(&vault_authority, &swap_params.destination_mint);
+        let beneficiary_destination_token_account =
+            get_associated_token_address(&self.beneficiary, &swap_params.destination_mint);
 
         Ok(SwapAndAccountMetas {
             swap: Swap::TokenSwap, // StabbleWeightedSWap
@@ -133,7 +135,7 @@ impl Amm for StableSwap {
                 user_token_out: *destination_token_account,
                 vault_token_in: vault_source_token_account,
                 vault_token_out: vault_destination_token_account,
-                beneficiary_token_out: vault_destination_token_account, // TODO
+                beneficiary_token_out: beneficiary_destination_token_account,
                 pool: self.key,
                 withdraw_authority: get_withdraw_authority_address(&self.state.vault),
                 vault: self.state.vault,
