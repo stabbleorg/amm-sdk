@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "libraries/*",
+    "programs/*"
+]
+resolver = "2"
