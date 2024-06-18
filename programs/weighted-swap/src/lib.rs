@@ -15,14 +15,16 @@ use math::fixed_math::SCALE;
 use pda::get_withdraw_authority_address;
 use rust_decimal::Decimal;
 use spl_associated_token_account::get_associated_token_address;
-use spl_token::{solana_program::program_pack::Pack, state::Account as TokenAccount};
-use stabble_vault::{pda::get_vault_authority_address, BENEFICIARY_ADDRESS};
+// use spl_token::{solana_program::program_pack::Pack, state::Account as TokenAccount};
+use stabble_vault::pda::get_vault_authority_address;
+use stabble_vault::vault::Vault;
 
 declare_id!("swapFpHZwjELNnjvThjajtiVmkz3yPQEHjLtka2fwHW");
 
 pub struct WeightedSwap {
     key: Pubkey,
     state: Pool,
+    beneficiary: Option<Pubkey>,
 }
 
 impl Clone for WeightedSwap {
@@ -30,6 +32,7 @@ impl Clone for WeightedSwap {
         WeightedSwap {
             key: self.key,
             state: self.state.clone(),
+            beneficiary: self.beneficiary.clone(),
         }
     }
 }
@@ -41,6 +44,7 @@ impl Amm for WeightedSwap {
         Ok(Self {
             key: keyed_account.key,
             state,
+            beneficiary: None,
         })
     }
 
@@ -61,22 +65,28 @@ impl Amm for WeightedSwap {
     }
 
     fn get_accounts_to_update(&self) -> Vec<Pubkey> {
-        let vault_authority = get_vault_authority_address(&self.state.vault);
+        // let vault_authority = get_vault_authority_address(&self.state.vault);
+        // self.state
+        //     .tokens
+        //     .iter()
+        //     .map(|token| get_associated_token_address(&vault_authority, &token.mint))
+        //     .collect()
 
-        self.state
-            .tokens
-            .iter()
-            .map(|token| get_associated_token_address(&vault_authority, &token.mint))
-            .collect()
+        vec![self.key, self.state.vault]
     }
 
     fn update(&mut self, account_map: &AccountMap) -> Result<()> {
-        for address in self.get_accounts_to_update().iter() {
-            let buff = try_get_account_data(account_map, &address)?;
-            let token_account = TokenAccount::unpack(buff)?;
-        }
+        // for address in self.get_accounts_to_update().iter() {
+        //     let buff = try_get_account_data(account_map, &address)?;
+        //     let token_account = TokenAccount::unpack(buff)?;
+        // }
 
-        // TODO: update token account?
+        let mut vault_data = try_get_account_data(account_map, &self.state.vault)?;
+        let vault = Vault::try_deserialize(&mut vault_data)?;
+        self.beneficiary = Some(vault.beneficiary);
+
+        let mut pool_data = try_get_account_data(account_map, &self.key)?;
+        self.state = Pool::try_deserialize(&mut pool_data)?;
 
         Ok(())
     }
@@ -114,7 +124,7 @@ impl Amm for WeightedSwap {
         let vault_source_token_account = get_associated_token_address(&vault_authority, &source_mint);
         let vault_destination_token_account = get_associated_token_address(&vault_authority, &destination_mint);
         let beneficiary_destination_token_account =
-            get_associated_token_address(&BENEFICIARY_ADDRESS, &destination_mint);
+            get_associated_token_address(&self.beneficiary.as_ref().unwrap(), &destination_mint);
 
         Ok(SwapAndAccountMetas {
             swap: Swap::TokenSwap, // StabbleWeightedSWap
