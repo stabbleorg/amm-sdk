@@ -10,7 +10,7 @@ use crate::fixed_math::FixedPow;
 pub const MIN_WEIGHT: u64 = 100_000_000; // 10%
 pub const MAX_WEIGHT: u64 = 900_000_000; // 90%
 
-pub const MIN_SWAP_FEE: u64 = 1_000_000; // 0.1%
+pub const MIN_SWAP_FEE: u64 = 100_000; // 0.01%
 pub const MAX_SWAP_FEE: u64 = 25_000_000; // 2.5%
 
 // Safe max balance supported by weighted_math
