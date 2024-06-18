@@ -1,5 +1,6 @@
 use crate::ID;
-use anchor_lang::prelude::{AccountMeta, Pubkey};
+use anchor_lang::solana_program::instruction::AccountMeta;
+use anchor_lang::solana_program::pubkey::Pubkey;
 use spl_token::ID as TOKEN_PROGRAM_ID;
 use stabble_vault::ID as VAULT_PROGRAM_ID;
 

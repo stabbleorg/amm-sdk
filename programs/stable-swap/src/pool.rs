@@ -1,4 +1,5 @@
-use anchor_lang::prelude::*;
+use anchor_lang::prelude::borsh;
+use anchor_lang::{account, solana_program::pubkey::Pubkey, AnchorDeserialize, AnchorSerialize};
 use bn::safe_math::CheckedMulDiv;
 use math::{
     fixed_math::{FixedComplement, FixedMul},
@@ -114,7 +115,7 @@ impl Pool {
         current_ts: i64,
         amount_in: u64,
         x_amount: u64,
-    ) ->  (u64, u64) {
+    ) -> (u64, u64) {
         let amplification = self.get_amplification(current_ts);
         let balances = self.get_balances();
         let current_invariant = stable_math::calc_invariant(amplification, &balances).unwrap();

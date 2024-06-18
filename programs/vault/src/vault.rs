@@ -1,4 +1,5 @@
-use anchor_lang::prelude::*;
+use anchor_lang::prelude::borsh;
+use anchor_lang::{account, solana_program::pubkey::Pubkey, AnchorDeserialize, AnchorSerialize};
 
 #[account]
 pub struct Vault {
