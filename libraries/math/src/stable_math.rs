@@ -380,8 +380,6 @@ mod tests {
         let token_amount_in = 100_000_000_000_000;
         let token_a_out = calc_out_given_in(amplification, &balances, 1, 0, token_amount_in, invariant).unwrap();
         let token_b_out = calc_out_given_in(amplification, &balances, 0, 1, token_amount_in, invariant).unwrap();
-        // assert_eq!(token_a_out, 99991271119068);
-        // assert_eq!(token_b_out, 100008628389995);
         assert_eq!(token_a_out, 99991271119067);
         assert_eq!(token_b_out, 100008628389994);
 
@@ -406,17 +404,14 @@ mod tests {
 
         let token_amount_in = 1_000_000_000_000;
         let token_amount_out = calc_out_given_in(amplification, &balances, 0, 1, token_amount_in, invariant).unwrap();
-        // assert_eq!(token_amount_out, 999845351780);
         assert_eq!(token_amount_out, 999845351779);
 
         let token_amount_in = 1_000_000_000;
         let token_amount_out = calc_out_given_in(amplification, &balances, 0, 1, token_amount_in, invariant).unwrap();
-        // assert_eq!(token_amount_out, 999845870);
         assert_eq!(token_amount_out, 999845869);
 
         let token_amount_in = 1_000_000;
         let token_amount_out = calc_out_given_in(amplification, &balances, 0, 1, token_amount_in, invariant).unwrap();
-        // assert_eq!(token_amount_out, 999846);
         assert_eq!(token_amount_out, 999845);
     }
 

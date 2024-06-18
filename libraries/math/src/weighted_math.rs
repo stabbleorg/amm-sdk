@@ -276,32 +276,81 @@ pub fn calc_token_out_given_exact_pool_token_in(
 mod tests {
     use super::*;
 
-    pub const BALANCES: [u64; 2] = [5_000_000_000_000_000_000, 1_000_000_000_000_000_000];
-    pub const NORMALIZED_WEIGHTS: [u64; 2] = [500_000_000, 500_000_000];
-
     #[test]
     fn test_calc_invariant() {
-        let invariant = calc_invariant(&BALANCES.to_vec(), &NORMALIZED_WEIGHTS.to_vec()).unwrap();
-        assert_eq!(invariant, 2236021719197214567);
+        let invariant = calc_invariant(
+            &vec![4_000_000_000_000_000_000, 1_000_000_000_000_000_000],
+            &vec![500_000_000, 500_000_000],
+        )
+        .unwrap();
+        assert_eq!(invariant, 1999999999999899652);
+
+        let invariant = calc_invariant(
+            &vec![
+                4_000_000_000_000_000_000,
+                4_000_000_000_000_000_000,
+                4_000_000_000_000_000_000,
+                4_000_000_000_000_000_000,
+            ],
+            &vec![100_000_000, 200_000_000, 300_000_000, 400_000_000],
+        )
+        .unwrap();
+        assert_eq!(invariant, 3999999829243548079);
+
+        let invariant = calc_invariant(
+            &vec![
+                4_000_000_000_000_000_000,
+                4_000_000_000_000_000_000,
+                4_000_000_000_000_000_000,
+            ],
+            &vec![330_000_000, 330_000_000, 340_000_000],
+        )
+        .unwrap();
+        assert_eq!(invariant, 3999999845679133687);
+
+        let invariant = calc_invariant(
+            &vec![
+                4_000_000_000_000_000_000,
+                4_000_000_000_000_000_000,
+                4_000_000_000_000_000_000,
+            ],
+            &vec![200_000_000, 200_000_000, 600_000_000],
+        )
+        .unwrap();
+        assert_eq!(invariant, 3999999833239242752);
+
+        let invariant = calc_invariant(
+            &vec![4_000_000_000_000_000_000, 4_000_000_000_000_000_000],
+            &vec![100_000_000, 900_000_000],
+        )
+        .unwrap();
+        assert_eq!(invariant, 3999999913148972546);
+
+        let invariant = calc_invariant(
+            &vec![4_000_000_000_000_000_000, 4_000_000_000_000_000_000],
+            &vec![200_000_000, 800_000_000],
+        )
+        .unwrap();
+        assert_eq!(invariant, 3999999916139535002);
     }
 
     #[test]
     fn test_calc_out_given_in() {
         let amount_out = calc_out_given_in(
-            BALANCES[0],
-            NORMALIZED_WEIGHTS[0],
-            BALANCES[1],
-            NORMALIZED_WEIGHTS[1],
+            5_000_000_000_000_000_000,
+            500_000_000,
+            1_000_000_000_000_000_000,
+            500_000_000,
             100_000_000_000,
         )
         .unwrap();
         assert_eq!(amount_out, 19000000000);
 
         let amount_out = calc_out_given_in(
-            BALANCES[0],
-            NORMALIZED_WEIGHTS[0],
-            BALANCES[1],
-            NORMALIZED_WEIGHTS[1],
+            5_000_000_000_000_000_000,
+            500_000_000,
+            1_000_000_000_000_000_000,
+            500_000_000,
             1_000_000_000_000_000,
         )
         .unwrap();
@@ -315,7 +364,8 @@ mod tests {
             100_000_000_000,
         )
         .unwrap();
-        assert_eq!(amount_out, 387103711);
+        assert_eq!(amount_out, 396983388);
+
         let amount_out = calc_out_given_in(
             366851436508161000,
             600_000_000,
@@ -330,8 +380,8 @@ mod tests {
     #[test]
     fn test_calc_pool_token_out() {
         let amount_out = calc_pool_token_out_given_exact_token_in(
-            BALANCES[0],
-            NORMALIZED_WEIGHTS[0],
+            5_000_000_000_000_000_000,
+            500_000_000,
             5_000_000_000_000_000,
             2236021719197214567 << 1,
             10_000_000,
@@ -340,8 +390,8 @@ mod tests {
         assert_eq!(amount_out, 2224287077214867);
 
         let amount_out = calc_pool_token_out_given_exact_token_in(
-            BALANCES[0],
-            NORMALIZED_WEIGHTS[0],
+            5_000_000_000_000_000_000,
+            500_000_000,
             5_000_000_000_000,
             2236021719197214567 << 1,
             10_000_000,
@@ -350,8 +400,8 @@ mod tests {
         assert_eq!(amount_out, 2222605588882);
 
         let amount_out = calc_pool_token_out_given_exact_token_in(
-            BALANCES[1],
-            NORMALIZED_WEIGHTS[1],
+            1_000_000_000_000_000_000,
+            500_000_000,
             1_000_000_000_000_000,
             2236021719197214567 << 1,
             10_000_000,
@@ -360,8 +410,8 @@ mod tests {
         assert_eq!(amount_out, 2224287077214867);
 
         let amount_out = calc_pool_token_out_given_exact_token_in(
-            BALANCES[1],
-            NORMALIZED_WEIGHTS[1],
+            1_000_000_000_000_000_000,
+            500_000_000,
             1_000_000_000_000,
             2236021719197214567 << 1,
             10_000_000,
@@ -370,21 +420,21 @@ mod tests {
         assert_eq!(amount_out, 2222605588882);
 
         let amount_out = calc_pool_token_out_given_exact_tokens_in(
-            &BALANCES.to_vec(),
-            &NORMALIZED_WEIGHTS.to_vec(),
+            &vec![5_000_000_000_000_000_000, 1_000_000_000_000_000_000],
+            &vec![500_000_000, 500_000_000],
             &vec![5_000_000_000_000_000 >> 1, 1_000_000_000_000_000 >> 1],
             2236021719197214567 << 1,
             10_000_000,
         )
         .unwrap();
-        assert_eq!(amount_out, 2236021719197214);
+        assert_eq!(amount_out, 2236003831023460);
     }
 
     #[test]
     fn test_calc_token_out_given_exact_pool_token_in() {
         let amount_out = calc_token_out_given_exact_pool_token_in(
-            BALANCES[0],
-            NORMALIZED_WEIGHTS[0],
+            5_000_000_000_000_000_000,
+            500_000_000,
             2222605588882,
             2236021719197214567 << 1,
             10_000_000,
@@ -393,8 +443,8 @@ mod tests {
         assert_eq!(amount_out, 4930225000000);
 
         let amount_out = calc_token_out_given_exact_pool_token_in(
-            BALANCES[1],
-            NORMALIZED_WEIGHTS[1],
+            1_000_000_000_000_000_000,
+            500_000_000,
             2222605588882,
             2236021719197214567 << 1,
             10_000_000,
