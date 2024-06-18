@@ -4,7 +4,7 @@ pub mod pool;
 
 use crate::pool::Pool;
 use account_meta_for_swap::StableSwapSwap;
-use anchor_lang::solana_program::pubkey::Pubkey;
+use anchor_lang::solana_program::{clock::Clock, pubkey::Pubkey};
 use anchor_lang::{declare_id, AccountDeserialize};
 use anyhow::Result;
 use jupiter_amm_interface::{
@@ -15,6 +15,7 @@ use math::fixed_math::SCALE;
 use pda::get_withdraw_authority_address;
 use rust_decimal::Decimal;
 use spl_associated_token_account::get_associated_token_address;
+use spl_token::solana_program::sysvar::Sysvar;
 // use spl_token::{solana_program::program_pack::Pack, state::Account as TokenAccount};
 use stabble_vault::pda::get_vault_authority_address;
 use stabble_vault::vault::Vault;
@@ -93,6 +94,8 @@ impl Amm for StableSwap {
 
         let mut pool_data = try_get_account_data(account_map, &self.key)?;
         self.state = Pool::try_deserialize(&mut pool_data)?;
+
+        self.unix_timestamp = Clock::get()?.unix_timestamp;
 
         Ok(())
     }
