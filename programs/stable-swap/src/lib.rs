@@ -4,7 +4,7 @@ pub mod pool;
 
 use crate::pool::Pool;
 use account_meta_for_swap::StableSwapSwap;
-use anchor_lang::solana_program::{clock::Clock, pubkey::Pubkey};
+use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::{declare_id, AccountDeserialize};
 use anyhow::Result;
 use jupiter_amm_interface::{
@@ -15,11 +15,9 @@ use math::fixed_math::SCALE;
 use pda::get_withdraw_authority_address;
 use rust_decimal::Decimal;
 use spl_associated_token_account::get_associated_token_address;
-use spl_token::solana_program::sysvar::Sysvar;
 // use spl_token::{solana_program::program_pack::Pack, state::Account as TokenAccount};
 use stabble_vault::pda::get_vault_authority_address;
 use stabble_vault::vault::Vault;
-use std::sync::atomic::Ordering;
 
 declare_id!("swapNyd8XiQwJ6ianp9snpu4brUqFxadzvHebnAXjJZ");
 
@@ -27,7 +25,6 @@ pub struct StableSwap {
     key: Pubkey,
     state: Pool,
     beneficiary: Option<Pubkey>,
-    unix_timestamp: i64,
 }
 
 impl Clone for StableSwap {
@@ -36,22 +33,18 @@ impl Clone for StableSwap {
             key: self.key,
             state: self.state.clone(),
             beneficiary: self.beneficiary.clone(),
-            unix_timestamp: self.unix_timestamp,
         }
     }
 }
 
 impl Amm for StableSwap {
-    fn from_keyed_account(keyed_account: &KeyedAccount, amm_context: &AmmContext) -> Result<Self> {
+    fn from_keyed_account(keyed_account: &KeyedAccount, _amm_context: &AmmContext) -> Result<Self> {
         let state = Pool::try_deserialize(&mut &keyed_account.account.data[..]).unwrap();
-
-        let unix_timestamp = amm_context.clock_ref.unix_timestamp.load(Ordering::Relaxed);
 
         Ok(Self {
             key: keyed_account.key,
             state,
             beneficiary: None,
-            unix_timestamp,
         })
     }
 
@@ -95,8 +88,6 @@ impl Amm for StableSwap {
         let mut pool_data = try_get_account_data(account_map, &self.key)?;
         self.state = Pool::try_deserialize(&mut pool_data)?;
 
-        self.unix_timestamp = Clock::get()?.unix_timestamp;
-
         Ok(())
     }
 
@@ -105,13 +96,9 @@ impl Amm for StableSwap {
         let token_out_index = self.state.get_token_index(quote_params.output_mint);
 
         let amount_in = self.state.calc_rounded_amount(quote_params.amount, token_in_index);
-        let (amount_out, amount_fee) = self.state.get_swap_result(
-            token_in_index,
-            token_out_index,
-            self.unix_timestamp,
-            quote_params.amount,
-            0,
-        );
+        let (amount_out, amount_fee) =
+            self.state
+                .get_swap_result(token_in_index, token_out_index, quote_params.amount, 0);
 
         Ok(Quote {
             fee_pct: Decimal::from_i128_with_scale(self.state.swap_fee as i128, SCALE),
