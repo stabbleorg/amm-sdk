@@ -251,6 +251,11 @@ mod tests {
             (U34F30::from_num(0.8), U34F30::from_num(4.5)),
             (U34F30::from_num(1.2), U34F30::from_num(5.0)),
             (U34F30::from_num(2.6), U34F30::from_num(6.7)),
+            (U34F30::from_num(1.6), U34F30::from_num(0.1)),
+            (U34F30::from_num(5.9), U34F30::from_num(0.3)),
+            (U34F30::from_num(3.1), U34F30::from_num(0.5)),
+            (U34F30::from_num(9.4), U34F30::from_num(0.7)),
+            (U34F30::from_num(0.7), U34F30::from_num(0.9)),
         ];
 
         for &(x, n) in test_cases {
