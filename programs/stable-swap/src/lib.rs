@@ -96,9 +96,10 @@ impl Amm for StableSwap {
         let token_out_index = self.state.get_token_index(quote_params.output_mint);
 
         let amount_in = self.state.calc_rounded_amount(quote_params.amount, token_in_index);
-        let (amount_out, amount_fee) =
-            self.state
-                .get_swap_result(token_in_index, token_out_index, quote_params.amount, 0);
+        let (amount_out, amount_fee) = self
+            .state
+            .get_swap_result(token_in_index, token_out_index, quote_params.amount, 0)
+            .unwrap();
 
         Ok(Quote {
             fee_pct: Decimal::from_i128_with_scale(self.state.swap_fee as i128, SCALE),

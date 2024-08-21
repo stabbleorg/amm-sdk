@@ -18,27 +18,27 @@ pub trait FixedPow<RHS = Self> {
     /// Output type for the methods of this trait.
     type Output;
 
-    fn pow_down(self, rhs: RHS) -> Self::Output;
+    fn pow_down(self, rhs: RHS) -> Option<Self::Output>;
 
-    fn pow_up(self, rhs: RHS) -> Self::Output;
+    fn pow_up(self, rhs: RHS) -> Option<Self::Output>;
 }
 
 pub trait FixedMul<RHS = Self> {
     /// Output type for the methods of this trait.
     type Output;
 
-    fn mul_down(self, rhs: RHS) -> Self::Output;
+    fn mul_down(self, rhs: RHS) -> Option<Self::Output>;
 
-    fn mul_up(self, rhs: RHS) -> Self::Output;
+    fn mul_up(self, rhs: RHS) -> Option<Self::Output>;
 }
 
 pub trait FixedDiv<RHS = Self> {
     /// Output type for the methods of this trait.
     type Output;
 
-    fn div_down(self, rhs: RHS) -> Self::Output;
+    fn div_down(self, rhs: RHS) -> Option<Self::Output>;
 
-    fn div_up(self, rhs: RHS) -> Self::Output;
+    fn div_up(self, rhs: RHS) -> Option<Self::Output>;
 }
 
 pub trait FixedComplement<RHS = Self> {
@@ -53,35 +53,35 @@ impl FixedPow for u64 {
     // Optimize for when y equals 1.0, 2.0 or 4.0, as those are very simple to implement and occur often in 50/50
     // and 80/20 Weighted Pools
 
-    fn pow_down(self, rhs: Self) -> Self::Output {
+    fn pow_down(self, rhs: Self) -> Option<Self::Output> {
         match rhs {
-            ZERO => ONE,
-            ONE => self,
+            ZERO => Some(ONE),
+            ONE => Some(self),
             TWO => self.mul_down(self),
             FOUR => {
-                let square = self.mul_down(self);
+                let square = self.mul_down(self)?;
                 square.mul_down(square)
             }
             _ => {
-                let base = U34F30::from_bits(self.mul_down(BITS_ONE));
-                let exp = U34F30::from_bits(rhs.mul_down(BITS_ONE));
+                let base = U34F30::from_bits(self.mul_down(BITS_ONE)?);
+                let exp = U34F30::from_bits(rhs.mul_down(BITS_ONE)?);
                 base.powf(exp).to_bits().div_down(BITS_ONE)
             }
         }
     }
 
-    fn pow_up(self, rhs: Self) -> Self::Output {
+    fn pow_up(self, rhs: Self) -> Option<Self::Output> {
         match rhs {
-            ZERO => ONE,
-            ONE => self,
+            ZERO => Some(ONE),
+            ONE => Some(self),
             TWO => self.mul_up(self),
             FOUR => {
-                let square = self.mul_up(self);
+                let square = self.mul_up(self)?;
                 square.mul_up(square)
             }
             _ => {
-                let base = U34F30::from_bits(self.mul_up(BITS_ONE));
-                let exp = U34F30::from_bits(rhs.mul_up(BITS_ONE));
+                let base = U34F30::from_bits(self.mul_up(BITS_ONE)?);
+                let exp = U34F30::from_bits(rhs.mul_up(BITS_ONE)?);
                 base.powf(exp).to_bits().div_up(BITS_ONE)
             }
         }
@@ -91,24 +91,24 @@ impl FixedPow for u64 {
 impl FixedMul for u64 {
     type Output = u64;
 
-    fn mul_down(self, rhs: Self) -> Self::Output {
-        self.checked_mul_div_down(rhs, ONE).unwrap()
+    fn mul_down(self, rhs: Self) -> Option<Self::Output> {
+        self.checked_mul_div_down(rhs, ONE)
     }
 
-    fn mul_up(self, rhs: Self) -> Self::Output {
-        self.checked_mul_div_up(rhs, ONE).unwrap()
+    fn mul_up(self, rhs: Self) -> Option<Self::Output> {
+        self.checked_mul_div_up(rhs, ONE)
     }
 }
 
 impl FixedDiv for u64 {
     type Output = u64;
 
-    fn div_down(self, rhs: Self) -> Self::Output {
-        self.checked_mul_div_down(ONE, rhs).unwrap()
+    fn div_down(self, rhs: Self) -> Option<Self::Output> {
+        self.checked_mul_div_down(ONE, rhs)
     }
 
-    fn div_up(self, rhs: Self) -> Self::Output {
-        self.checked_mul_div_up(ONE, rhs).unwrap()
+    fn div_up(self, rhs: Self) -> Option<Self::Output> {
+        self.checked_mul_div_up(ONE, rhs)
     }
 }
 
@@ -165,8 +165,8 @@ mod tests {
     fn test_powers_for_invariant() {
         for normalized_weight in AVAILABLE_WEIGHTS.clone() {
             let value = ((MAX_SAFE_BALANCE as f64 / 1e9).powf(normalized_weight as f64 / 1e9) * 1e9) as u64;
-            let value_1 = MAX_SAFE_BALANCE.pow_down(normalized_weight);
-            let value_2 = MAX_SAFE_BALANCE.pow_up(normalized_weight);
+            let value_1 = MAX_SAFE_BALANCE.pow_down(normalized_weight).unwrap();
+            let value_2 = MAX_SAFE_BALANCE.pow_up(normalized_weight).unwrap();
             check_epsilon(value, value_1);
             check_epsilon(value, value_2);
             assert!(value_2 >= value_1);
@@ -177,8 +177,8 @@ mod tests {
     fn test_powers_for_deposit() {
         for normalized_weight in AVAILABLE_WEIGHTS.clone() {
             let value = ((MIN_INVARIANT_RATIO as f64 / 1e9).powf(normalized_weight as f64 / 1e9) * 1e9) as u64;
-            let value_1 = MIN_INVARIANT_RATIO.pow_down(normalized_weight);
-            let value_2 = MIN_INVARIANT_RATIO.pow_up(normalized_weight);
+            let value_1 = MIN_INVARIANT_RATIO.pow_down(normalized_weight).unwrap();
+            let value_2 = MIN_INVARIANT_RATIO.pow_up(normalized_weight).unwrap();
             check_epsilon(value, value_1);
             check_epsilon(value, value_2);
             assert!(value_2 >= value_1);
@@ -188,10 +188,10 @@ mod tests {
     #[test]
     fn test_powers_for_withdraw() {
         for normalized_weight in AVAILABLE_WEIGHTS.clone() {
-            let exp = ONE.div_down(normalized_weight);
+            let exp = ONE.div_down(normalized_weight).unwrap();
             let value = ((MAX_INVARIANT_RATIO as f64 / 1e9).powf(exp as f64 / 1e9) * 1e9) as u64;
-            let value_1 = MAX_INVARIANT_RATIO.pow_down(exp);
-            let value_2 = MAX_INVARIANT_RATIO.pow_up(exp);
+            let value_1 = MAX_INVARIANT_RATIO.pow_down(exp).unwrap();
+            let value_2 = MAX_INVARIANT_RATIO.pow_up(exp).unwrap();
             check_epsilon(value, value_1);
             check_epsilon(value, value_2);
             assert!(value_2 >= value_1);
@@ -202,18 +202,18 @@ mod tests {
     fn test_powers_for_swap() {
         for w_i in AVAILABLE_WEIGHTS.clone() {
             for w_o in AVAILABLE_WEIGHTS.clone() {
-                let exp = w_i.div_up(w_o);
+                let exp = w_i.div_up(w_o).unwrap();
                 let value = ((MAX_INVARIANT_RATIO as f64 / 1e9).powf(exp as f64 / 1e9) * 1e9) as u64;
-                let value_1 = MAX_INVARIANT_RATIO.pow_down(exp);
-                let value_2 = MAX_INVARIANT_RATIO.pow_up(exp);
+                let value_1 = MAX_INVARIANT_RATIO.pow_down(exp).unwrap();
+                let value_2 = MAX_INVARIANT_RATIO.pow_up(exp).unwrap();
                 check_epsilon(value, value_1);
                 check_epsilon(value, value_2);
                 assert!(value_2 >= value_1);
 
-                let exp = w_o.div_up(w_i);
+                let exp = w_o.div_up(w_i).unwrap();
                 let value = ((MAX_INVARIANT_RATIO as f64 / 1e9).powf(exp as f64 / 1e9) * 1e9) as u64;
-                let value_1 = MAX_INVARIANT_RATIO.pow_down(exp);
-                let value_2 = MAX_INVARIANT_RATIO.pow_up(exp);
+                let value_1 = MAX_INVARIANT_RATIO.pow_down(exp).unwrap();
+                let value_2 = MAX_INVARIANT_RATIO.pow_up(exp).unwrap();
                 check_epsilon(value, value_1);
                 check_epsilon(value, value_2);
                 assert!(value_2 >= value_1);
@@ -228,6 +228,6 @@ mod tests {
             similar - exact
         };
 
-        assert!(diff.div_up(exact) < 100); // 0.00001%
+        assert!(diff.div_up(exact).unwrap() < 100); // 0.00001%
     }
 }

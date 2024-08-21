@@ -84,12 +84,12 @@ impl Pool {
         token_out_index: usize,
         amount_in: u64,
         x_amount: u64,
-    ) -> (u64, u64) {
+    ) -> Option<(u64, u64)> {
         if self.invariant == 0 {
-            return (0, 0);
+            return Some((0, 0));
         }
 
-        let swap_fee = swap_fee_math::calc_swap_fee_in_discount(self.swap_fee, x_amount);
+        let swap_fee = swap_fee_math::calc_swap_fee_in_discount(self.swap_fee, x_amount)?;
 
         let wrapped_amount_in = self.calc_wrapped_amount(amount_in, token_in_index);
         let wrapped_amount_out_without_fee = weighted_math::calc_out_given_in(
@@ -98,14 +98,13 @@ impl Pool {
             self.tokens[token_out_index].balance,
             self.tokens[token_out_index].weight,
             wrapped_amount_in,
-        )
-        .unwrap();
+        )?;
 
-        let wrapped_amount_out = wrapped_amount_out_without_fee.mul_down(swap_fee.complement());
-        let wrapped_amount_fee = wrapped_amount_out_without_fee - wrapped_amount_out;
+        let wrapped_amount_out = wrapped_amount_out_without_fee.mul_down(swap_fee.complement())?;
+        let wrapped_amount_fee = wrapped_amount_out_without_fee.checked_sub(wrapped_amount_out)?;
         let amount_out = self.calc_unwrapped_amount(wrapped_amount_out, token_out_index);
         let amount_fee = self.calc_unwrapped_amount(wrapped_amount_fee, token_out_index);
 
-        (amount_out, amount_fee)
+        Some((amount_out, amount_fee))
     }
 }
