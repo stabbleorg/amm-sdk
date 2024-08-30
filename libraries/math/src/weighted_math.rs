@@ -136,7 +136,7 @@ pub fn calc_pool_token_out_given_exact_token_in(
 ) -> Option<u64> {
     // LP out, so we round down overall.
 
-    let balance_ratio_with_fee = (balance.checked_add(amount_in)?).div_down(balance)?;
+    let balance_ratio_with_fee = balance.checked_add(amount_in)?.div_down(balance)?;
     let invariant_ratio_with_fees = balance_ratio_with_fee
         .mul_down(normalized_weight)?
         .checked_add(normalized_weight.complement())?;
@@ -158,7 +158,7 @@ pub fn calc_pool_token_out_given_exact_token_in(
         return Some(0);
     }
 
-    let balance_ratio = (balance.checked_add(amount_in_without_fee)?).div_down(balance)?;
+    let balance_ratio = balance.checked_add(amount_in_without_fee)?.div_down(balance)?;
     let invariant_ratio = balance_ratio.pow_down(normalized_weight)?;
 
     if invariant_ratio > fixed_math::ONE {
@@ -180,7 +180,7 @@ pub fn calc_pool_token_out_given_exact_tokens_in(
     let mut invariant_ratio_with_fees = 0;
 
     for i in 0..balances.len() {
-        let balance_ratio_with_fee = (balances[i].checked_add(amounts_in[i])?).div_down(balances[i])?;
+        let balance_ratio_with_fee = balances[i].checked_add(amounts_in[i])?.div_down(balances[i])?;
         balance_ratios_with_fee.push(balance_ratio_with_fee);
         invariant_ratio_with_fees = balance_ratio_with_fee
             .mul_down(normalized_weights[i])?
@@ -200,7 +200,7 @@ pub fn calc_pool_token_out_given_exact_tokens_in(
             } else {
                 0
             };
-            let swap_fee_amount = (amounts_in[i].checked_sub(non_taxable_amount)?).mul_up(swap_fee)?;
+            let swap_fee_amount = amounts_in[i].checked_sub(non_taxable_amount)?.mul_up(swap_fee)?;
             amount_in_without_fee = amounts_in[i].checked_sub(swap_fee_amount)?;
         } else {
             amount_in_without_fee = amounts_in[i];
@@ -214,7 +214,7 @@ pub fn calc_pool_token_out_given_exact_tokens_in(
             }
         }
 
-        let balance_ratio = (balances[i].checked_add(amount_in_without_fee)?).div_down(balances[i])?;
+        let balance_ratio = balances[i].checked_add(amount_in_without_fee)?.div_down(balances[i])?;
         invariant_ratio = invariant_ratio.mul_down(balance_ratio.pow_down(normalized_weights[i])?)?;
     }
 
@@ -246,7 +246,7 @@ pub fn calc_token_out_given_exact_pool_token_in(
 
     // Calculate the factor by which the invariant will decrease after burning LPAmountIn
 
-    let invariant_ratio = (pool_token_supply.checked_sub(amount_in)?).div_up(pool_token_supply)?;
+    let invariant_ratio = pool_token_supply.checked_sub(amount_in)?.div_up(pool_token_supply)?;
     if invariant_ratio < MIN_INVARIANT_RATIO {
         return None;
     }

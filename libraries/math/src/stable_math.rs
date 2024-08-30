@@ -193,7 +193,7 @@ pub fn calc_pool_token_out_given_exact_tokens_in(
     let mut invariant_ratio_with_fees = 0;
     for i in 0..balances.len() {
         let current_weight = balances[i].div_down(sum)?;
-        balance_ratios_with_fee.push((balances[i].checked_add(amounts_in[i])?).div_down(balances[i])?);
+        balance_ratios_with_fee.push(balances[i].checked_add(amounts_in[i])?.div_down(balances[i])?);
         invariant_ratio_with_fees = balance_ratios_with_fee[i]
             .mul_down(current_weight)?
             .checked_add(invariant_ratio_with_fees)?;
