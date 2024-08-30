@@ -22,7 +22,7 @@ impl From<StableSwapSwap> for Vec<AccountMeta> {
     fn from(accounts: StableSwapSwap) -> Self {
         vec![
             AccountMeta::new_readonly(ID, false),
-            AccountMeta::new_readonly(accounts.user, true),
+            AccountMeta::new_readonly(accounts.user, false), // hack
             AccountMeta::new(accounts.user_token_in, false),
             AccountMeta::new(accounts.user_token_out, false),
             AccountMeta::new(accounts.vault_token_in, false),

@@ -15,7 +15,6 @@ use math::fixed_math::SCALE;
 use pda::get_withdraw_authority_address;
 use rust_decimal::Decimal;
 use spl_associated_token_account::get_associated_token_address;
-// use spl_token::{solana_program::program_pack::Pack, state::Account as TokenAccount};
 use stabble_vault::pda::get_vault_authority_address;
 use stabble_vault::vault::Vault;
 
@@ -65,22 +64,10 @@ impl Amm for WeightedSwap {
     }
 
     fn get_accounts_to_update(&self) -> Vec<Pubkey> {
-        // let vault_authority = get_vault_authority_address(&self.state.vault);
-        // self.state
-        //     .tokens
-        //     .iter()
-        //     .map(|token| get_associated_token_address(&vault_authority, &token.mint))
-        //     .collect()
-
         vec![self.key, self.state.vault]
     }
 
     fn update(&mut self, account_map: &AccountMap) -> Result<()> {
-        // for address in self.get_accounts_to_update().iter() {
-        //     let buff = try_get_account_data(account_map, &address)?;
-        //     let token_account = TokenAccount::unpack(buff)?;
-        // }
-
         let mut vault_data = try_get_account_data(account_map, &self.state.vault)?;
         let vault = Vault::try_deserialize(&mut vault_data)?;
         self.beneficiary = Some(vault.beneficiary);
@@ -128,7 +115,7 @@ impl Amm for WeightedSwap {
             get_associated_token_address(&self.beneficiary.as_ref().unwrap(), &destination_mint);
 
         Ok(SwapAndAccountMetas {
-            swap: Swap::TokenSwap, // StabbleWeightedSWap
+            swap: Swap::StabbleWeightedSwap,
             account_metas: WeightedSwapSwap {
                 user: *token_transfer_authority,
                 user_token_in: *source_token_account,
@@ -147,5 +134,13 @@ impl Amm for WeightedSwap {
 
     fn clone_amm(&self) -> Box<dyn Amm + Send + Sync> {
         Box::new(self.clone())
+    }
+
+    fn program_dependencies(&self) -> Vec<(Pubkey, String)> {
+        vec![(stabble_vault::id(), String::from("stabble_vault"))]
+    }
+
+    fn is_active(&self) -> bool {
+        self.state.is_active
     }
 }

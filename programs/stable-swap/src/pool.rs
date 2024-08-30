@@ -1,15 +1,10 @@
 use anchor_lang::prelude::borsh;
-use anchor_lang::{
-    account,
-    solana_program::{clock::Clock, pubkey::Pubkey},
-    AnchorDeserialize, AnchorSerialize,
-};
+use anchor_lang::{account, solana_program::pubkey::Pubkey, AnchorDeserialize, AnchorSerialize};
 use bn::safe_math::CheckedMulDiv;
 use math::{
     fixed_math::{FixedComplement, FixedMul},
     stable_math, swap_fee_math,
 };
-use spl_token::solana_program::sysvar::Sysvar;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Eq, PartialEq, Clone, Copy)]
 pub struct PoolToken {
@@ -37,10 +32,9 @@ pub struct Pool {
 }
 
 impl Pool {
-    pub fn get_amplification(&self) -> u64 {
+    pub fn get_amplification(&self, current_ts: i64) -> u64 {
         let amp_initial_factor = self.amp_initial_factor as u64;
         let amp_target_factor = self.amp_target_factor as u64;
-        let current_ts = Clock::get().unwrap().unix_timestamp;
 
         if current_ts <= self.ramp_start_ts {
             amp_initial_factor.saturating_mul(stable_math::AMP_PRECISION)
@@ -116,12 +110,13 @@ impl Pool {
     /// estimated swap amount out
     pub fn get_swap_result(
         &self,
+        current_ts: i64,
         token_in_index: usize,
         token_out_index: usize,
         amount_in: u64,
         x_amount: u64,
     ) -> Option<(u64, u64)> {
-        let amplification = self.get_amplification();
+        let amplification = self.get_amplification(current_ts);
         let balances = self.get_balances();
         let current_invariant = stable_math::calc_invariant(amplification, &balances)?;
         let swap_fee = swap_fee_math::calc_swap_fee_in_discount(self.swap_fee, x_amount)?;

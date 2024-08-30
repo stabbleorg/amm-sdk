@@ -1,6 +1,7 @@
 pub mod account_meta_for_swap;
 pub mod pda;
 pub mod pool;
+use std::sync::atomic::Ordering;
 
 use crate::pool::Pool;
 use account_meta_for_swap::StableSwapSwap;
@@ -15,7 +16,6 @@ use math::fixed_math::SCALE;
 use pda::get_withdraw_authority_address;
 use rust_decimal::Decimal;
 use spl_associated_token_account::get_associated_token_address;
-// use spl_token::{solana_program::program_pack::Pack, state::Account as TokenAccount};
 use stabble_vault::pda::get_vault_authority_address;
 use stabble_vault::vault::Vault;
 
@@ -24,6 +24,7 @@ declare_id!("swapNyd8XiQwJ6ianp9snpu4brUqFxadzvHebnAXjJZ");
 pub struct StableSwap {
     key: Pubkey,
     state: Pool,
+    current_ts: i64,
     beneficiary: Option<Pubkey>,
 }
 
@@ -32,18 +33,21 @@ impl Clone for StableSwap {
         StableSwap {
             key: self.key,
             state: self.state.clone(),
+            current_ts: self.current_ts.clone(),
             beneficiary: self.beneficiary.clone(),
         }
     }
 }
 
 impl Amm for StableSwap {
-    fn from_keyed_account(keyed_account: &KeyedAccount, _amm_context: &AmmContext) -> Result<Self> {
+    fn from_keyed_account(keyed_account: &KeyedAccount, amm_context: &AmmContext) -> Result<Self> {
         let state = Pool::try_deserialize(&mut &keyed_account.account.data[..]).unwrap();
+        let current_ts = amm_context.clock_ref.unix_timestamp.load(Ordering::SeqCst);
 
         Ok(Self {
             key: keyed_account.key,
             state,
+            current_ts,
             beneficiary: None,
         })
     }
@@ -65,22 +69,10 @@ impl Amm for StableSwap {
     }
 
     fn get_accounts_to_update(&self) -> Vec<Pubkey> {
-        // let vault_authority = get_vault_authority_address(&self.state.vault);
-        // self.state
-        //     .tokens
-        //     .iter()
-        //     .map(|token| get_associated_token_address(&vault_authority, &token.mint))
-        //     .collect()
-
         vec![self.key, self.state.vault]
     }
 
     fn update(&mut self, account_map: &AccountMap) -> Result<()> {
-        // for address in self.get_accounts_to_update().iter() {
-        //     let buff = try_get_account_data(account_map, &address)?;
-        //     let token_account = TokenAccount::unpack(buff)?;
-        // }
-
         let mut vault_data = try_get_account_data(account_map, &self.state.vault)?;
         let vault = Vault::try_deserialize(&mut vault_data)?;
         self.beneficiary = Some(vault.beneficiary);
@@ -98,7 +90,7 @@ impl Amm for StableSwap {
         let amount_in = self.state.calc_rounded_amount(quote_params.amount, token_in_index);
         let (amount_out, amount_fee) = self
             .state
-            .get_swap_result(token_in_index, token_out_index, quote_params.amount, 0)
+            .get_swap_result(self.current_ts, token_in_index, token_out_index, quote_params.amount, 0)
             .unwrap();
 
         Ok(Quote {
@@ -128,7 +120,7 @@ impl Amm for StableSwap {
             get_associated_token_address(&self.beneficiary.as_ref().unwrap(), &destination_mint);
 
         Ok(SwapAndAccountMetas {
-            swap: Swap::TokenSwap, // StabbleWeightedSWap
+            swap: Swap::StabbleSwap,
             account_metas: StableSwapSwap {
                 user: *token_transfer_authority,
                 user_token_in: *source_token_account,
@@ -147,5 +139,13 @@ impl Amm for StableSwap {
 
     fn clone_amm(&self) -> Box<dyn Amm + Send + Sync> {
         Box::new(self.clone())
+    }
+
+    fn program_dependencies(&self) -> Vec<(Pubkey, String)> {
+        vec![(stabble_vault::id(), String::from("stabble_vault"))]
+    }
+
+    fn is_active(&self) -> bool {
+        self.state.is_active
     }
 }

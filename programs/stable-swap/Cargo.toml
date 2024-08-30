@@ -4,13 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anchor-lang = "^0.30.0"
+anchor-lang = "*"
 anyhow = "1.0.86"
 rust_decimal = "1.26.1"
-jupiter-amm-interface = "0.4.4"
-spl-token = { version = "^3", features = ["no-entrypoint"] }
-spl-associated-token-account = { version = "^3", features = ["no-entrypoint"] }
+jupiter-amm-interface = { git = "https://github.com/jup-ag/jupiter-amm-interface.git", branch = "feat/stabble" }
+spl-token = { version = "*", features = ["no-entrypoint"] }
+spl-associated-token-account = { version = "*", features = ["no-entrypoint"] }
 bn = { path = "../../libraries/bn" }
 math = { path = "../../libraries/math" }
 stabble-vault = { path = "../vault" }
-stabble-stable-swap-cpi = { git = "https://github.com/stabbleorg/amm-cpi.git" }
