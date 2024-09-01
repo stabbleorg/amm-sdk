@@ -16,12 +16,12 @@ jupiter-amm = [
 ]
 
 [dependencies]
-anchor-lang = "*"
-anyhow = { version = "1.0.86", optional = true }
-rust_decimal = { version = "1.26.1", optional = true }
+anchor-lang = { workspace = true }
+anyhow = { workspace = true, optional = true }
+rust_decimal = { workspace = true, optional = true }
 jupiter-amm-interface = { git = "https://github.com/jup-ag/jupiter-amm-interface.git", branch = "feat/stabble", optional = true }
-spl-token = { version = "*", features = ["no-entrypoint"], optional = true }
-spl-associated-token-account = { version = "*", features = ["no-entrypoint"], optional = true }
+spl-token = { workspace = true, features = ["no-entrypoint"], optional = true }
+spl-associated-token-account = { workspace = true, features = ["no-entrypoint"], optional = true }
 bn = { path = "../../libraries/bn" }
 math = { path = "../../libraries/math" }
 stabble-vault = { path = "../vault" }

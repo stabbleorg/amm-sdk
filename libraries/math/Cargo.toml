@@ -7,9 +7,9 @@ edition = "2021"
 name = "math"
 
 [dependencies]
-num-traits = "0.2"
-thiserror = "1.0"
-typenum = "1.17.0"
-fixed = "1.27.0"
+num-traits = { workspace = true }
+thiserror = { workspace = true }
+typenum = { workspace = true }
+fixed = { workspace = true }
 fixed-exp = { path = "../fixed-exp" }
 bn = { path = "../bn" }

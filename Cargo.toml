@@ -4,3 +4,16 @@ members = [
     "programs/*"
 ]
 resolver = "2"
+
+[workspace.dependencies]
+anchor-lang = "*"
+anyhow = { version = "1.0.86" }
+rust_decimal = { version = "1.26.1" }
+jupiter-amm-interface = { git = "https://github.com/jup-ag/jupiter-amm-interface.git", branch = "feat/stabble" }
+spl-token = { version = "*", features = ["no-entrypoint"] }
+solana-program = { version = "*" }
+spl-associated-token-account = { version = "*", features = ["no-entrypoint"] }
+num-traits = "0.2"
+thiserror = "1.0"
+typenum = "1.17.0"
+fixed = "1.27.0"
