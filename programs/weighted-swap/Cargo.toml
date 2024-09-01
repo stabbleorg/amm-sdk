@@ -1,7 +1,12 @@
 [package]
 name = "stabble-weighted-swap"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
+
+[features]
+default = ["cpi"]
+cpi = ["no-entrypoint"]
+no-entrypoint = []
 
 [dependencies]
 anchor-lang = "*"
