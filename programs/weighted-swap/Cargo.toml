@@ -7,6 +7,7 @@ edition = "2021"
 default = ["cpi"]
 cpi = ["no-entrypoint"]
 no-entrypoint = []
+jupiter-amm = []
 
 [dependencies]
 anchor-lang = "*"
