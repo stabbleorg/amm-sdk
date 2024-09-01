@@ -7,15 +7,21 @@ edition = "2021"
 default = ["cpi"]
 cpi = ["no-entrypoint"]
 no-entrypoint = []
-jupiter-amm = []
+jupiter-amm = [
+    "dep:anyhow",
+    "dep:rust_decimal",
+    "dep:jupiter-amm-interface",
+    "dep:spl-token",
+    "dep:spl-associated-token-account",
+]
 
 [dependencies]
 anchor-lang = "*"
-anyhow = "1.0.86"
-rust_decimal = "1.26.1"
-jupiter-amm-interface = { git = "https://github.com/jup-ag/jupiter-amm-interface.git", branch = "feat/stabble" }
-spl-token = { version = "*", features = ["no-entrypoint"] }
-spl-associated-token-account = { version = "*", features = ["no-entrypoint"] }
+anyhow = { version = "1.0.86", optional = true }
+rust_decimal = { version = "1.26.1", optional = true }
+jupiter-amm-interface = { git = "https://github.com/jup-ag/jupiter-amm-interface.git", branch = "feat/stabble", optional = true }
+spl-token = { version = "*", features = ["no-entrypoint"], optional = true }
+spl-associated-token-account = { version = "*", features = ["no-entrypoint"], optional = true }
 bn = { path = "../../libraries/bn" }
 math = { path = "../../libraries/math" }
 stabble-vault = { path = "../vault" }
