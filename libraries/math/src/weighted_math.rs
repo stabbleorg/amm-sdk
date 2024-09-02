@@ -149,7 +149,9 @@ pub fn calc_pool_token_out_given_exact_token_in(
         };
         let taxable_amount = amount_in.checked_sub(non_taxable_amount)?;
         let swap_fee_amount = taxable_amount.mul_up(swap_fee)?;
-        non_taxable_amount + taxable_amount.checked_sub(swap_fee_amount)?
+        non_taxable_amount
+            .checked_add(taxable_amount)?
+            .checked_sub(swap_fee_amount)?
     } else {
         amount_in
     };

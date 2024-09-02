@@ -74,10 +74,13 @@ impl Amm for WeightedSwap {
     }
 
     fn quote(&self, quote_params: &QuoteParams) -> Result<Quote> {
-        let token_in_index = self.state.get_token_index(quote_params.input_mint);
-        let token_out_index = self.state.get_token_index(quote_params.output_mint);
+        let token_in_index = self.state.get_token_index(quote_params.input_mint).unwrap();
+        let token_out_index = self.state.get_token_index(quote_params.output_mint).unwrap();
 
-        let amount_in = self.state.calc_rounded_amount(quote_params.amount, token_in_index);
+        let amount_in = self
+            .state
+            .calc_rounded_amount(quote_params.amount, token_in_index)
+            .unwrap();
         let (amount_out, amount_fee) = self
             .state
             .get_swap_result(token_in_index, token_out_index, quote_params.amount, 0)

@@ -56,7 +56,7 @@ pub fn calc_invariant(amplification: u64, balances: &Vec<u64>) -> Option<u64> {
 
         for i in 0..balances.len() {
             // (p * invariant) / (balances[i] * num_tokens)
-            p = p.checked_mul_div_down(invariant, uint192!(balances[i] * num_tokens))?;
+            p = p.checked_mul_div_down(invariant, uint192!(balances[i].checked_mul(num_tokens)?))?;
         }
 
         prev_invariant = invariant;
@@ -113,20 +113,18 @@ pub fn calc_out_given_in(
     let mut new_balances = vec![];
     for i in 0..balances.len() {
         if i == token_index_in {
-            new_balances.push(balances[i] + token_amount_in);
+            new_balances.push(balances[i].checked_add(token_amount_in)?);
         } else {
             new_balances.push(balances[i]);
         }
     }
 
-    let final_balance_out = get_token_balance_given_invariant_n_all_other_balances(
-        amplification,
-        &new_balances,
-        invariant,
-        token_index_out,
-    )?;
+    let balance_out = *balances.get(token_index_out)?;
 
-    balances[token_index_out].checked_sub(final_balance_out)?.checked_sub(1)
+    let final_balance_out =
+        get_token_balance_given_invariant_n_all_other_balances(amplification, &new_balances, invariant, balance_out)?;
+
+    balance_out.checked_sub(final_balance_out)?.checked_sub(1)
 }
 
 // Computes how many tokens must be sent to a pool if `token_amount_out` are sent given the
@@ -162,14 +160,12 @@ pub fn calc_in_given_out(
         }
     }
 
-    let final_balance_in = get_token_balance_given_invariant_n_all_other_balances(
-        amplification,
-        &new_balances,
-        invariant,
-        token_index_in,
-    )?;
+    let balance_in = *balances.get(token_index_in)?;
 
-    final_balance_in.checked_sub(balances[token_index_in])?.checked_add(1)
+    let final_balance_in =
+        get_token_balance_given_invariant_n_all_other_balances(amplification, &new_balances, invariant, balance_in)?;
+
+    final_balance_in.checked_sub(balance_in)?.checked_add(1)
 }
 
 // See: https://github.com/stabbleorg/balancer-v2-monorepo/blob/master/pkg/pool-stable/contracts/StableMath.sol#L201-L255
@@ -242,14 +238,15 @@ pub fn calc_token_out_given_exact_pool_token_in(
 ) -> Option<u64> {
     // Token out, so we round down overall.
 
-    let new_invariant = (pool_token_supply.checked_sub(amount_in)?)
-        .checked_mul_div_up(current_invariant, pool_token_supply)
-        .unwrap();
+    let new_invariant =
+        (pool_token_supply.checked_sub(amount_in)?).checked_mul_div_up(current_invariant, pool_token_supply)?;
+
+    let balance = *balances.get(token_index)?;
 
     // Calculate amount out without fee
     let new_balance =
-        get_token_balance_given_invariant_n_all_other_balances(amplification, &balances, new_invariant, token_index)?;
-    let amount_out_without_fee = balances[token_index] - new_balance;
+        get_token_balance_given_invariant_n_all_other_balances(amplification, &balances, new_invariant, balance)?;
+    let amount_out_without_fee = balance.checked_sub(new_balance)?;
 
     // First calculate the sum of all token balances, which will be used to calculate
     // the current weight of each token
@@ -257,7 +254,7 @@ pub fn calc_token_out_given_exact_pool_token_in(
 
     // We can now compute how much excess balance is being withdrawn as a result of the virtual swaps, which result
     // in swap fees.
-    let current_weight = balances[token_index].div_down(sum)?;
+    let current_weight = balance.div_down(sum)?;
     let taxable_percentage = current_weight.complement();
 
     // Swap fees are typically charged on 'token in', but there is no 'token in' here, so we apply it
@@ -277,7 +274,7 @@ fn get_token_balance_given_invariant_n_all_other_balances(
     amplification: u64,
     balances: &Vec<u64>,
     invariant: u64,
-    token_index: usize,
+    balance: u64, // balance of a given token (token_index)
 ) -> Option<u64> {
     // Rounds result up overall
 
@@ -293,15 +290,16 @@ fn get_token_balance_given_invariant_n_all_other_balances(
         p = p.checked_mul_div_down(p_i, invariant)?;
         sum = sum.checked_add(balances[i])?;
     }
+
     // No need to use safe math, based on the loop above `sum` is greater than or equal to `balances[token_index]`
-    sum = sum.saturating_sub(balances[token_index]);
+    sum = sum.saturating_sub(balance);
     let sum = uint192!(sum);
 
     let invariant_2 = invariant.checked_mul(invariant)?;
     // We remove the balance from c by multiplying it
     let c = invariant_2
         .checked_mul_div_up(amp_precision_u192(), amp_times_total.checked_mul(p)?)?
-        .checked_mul(uint192!(balances[token_index]))?;
+        .checked_mul(uint192!(balance))?;
     let b = invariant
         .checked_mul_div_down(amp_precision_u192(), amp_times_total)?
         .checked_add(sum)?;

@@ -37,43 +37,43 @@ impl Pool {
         self.tokens.iter().map(|token| token.balance).collect()
     }
 
-    pub fn get_token_index(&self, mint: Pubkey) -> usize {
-        self.tokens
-            .iter()
-            .enumerate()
-            .find(|(_, token)| token.mint == mint)
-            .unwrap()
-            .0
+    pub fn get_token_index(&self, mint: Pubkey) -> Option<usize> {
+        self.tokens.iter().position(|token| token.mint == mint)
     }
 
     /// scaling up/down from token amount to wrapped balance amount
-    pub fn calc_wrapped_amount(&self, amount: u64, token_index: usize) -> u64 {
-        if self.tokens[token_index].scaling_factor == 1 {
-            amount
-        } else if self.tokens[token_index].scaling_up {
-            amount * self.tokens[token_index].scaling_factor
+    pub fn calc_wrapped_amount(&self, amount: u64, token_index: usize) -> Option<u64> {
+        let pool_token = self.tokens.get(token_index)?;
+        if pool_token.scaling_factor == 1 {
+            Some(amount)
+        } else if pool_token.scaling_up {
+            amount.checked_mul(pool_token.scaling_factor)
         } else {
-            amount / self.tokens[token_index].scaling_factor
+            amount.checked_div(pool_token.scaling_factor)
         }
     }
 
     /// scaling up/down from wrapped balance amount to token amount
-    pub fn calc_unwrapped_amount(&self, amount: u64, token_index: usize) -> u64 {
-        if self.tokens[token_index].scaling_factor == 1 {
-            amount
-        } else if self.tokens[token_index].scaling_up {
-            amount / self.tokens[token_index].scaling_factor
+    pub fn calc_unwrapped_amount(&self, amount: u64, token_index: usize) -> Option<u64> {
+        let pool_token = self.tokens.get(token_index)?;
+        if pool_token.scaling_factor == 1 {
+            Some(amount)
+        } else if pool_token.scaling_up {
+            amount.checked_div(pool_token.scaling_factor)
         } else {
-            amount * self.tokens[token_index].scaling_factor
+            amount.checked_mul(pool_token.scaling_factor)
         }
     }
 
     /// round down token amount not to send the lost amount from wrapped balance amount when it scaled down
-    pub fn calc_rounded_amount(&self, amount: u64, token_index: usize) -> u64 {
-        if self.tokens[token_index].scaling_up {
-            amount
+    pub fn calc_rounded_amount(&self, amount: u64, token_index: usize) -> Option<u64> {
+        let pool_token = self.tokens.get(token_index)?;
+        if pool_token.scaling_up {
+            Some(amount)
         } else {
-            amount / self.tokens[token_index].scaling_factor * self.tokens[token_index].scaling_factor
+            amount
+                .checked_div(pool_token.scaling_factor)?
+                .checked_mul(pool_token.scaling_factor)
         }
     }
 
@@ -91,19 +91,22 @@ impl Pool {
 
         let swap_fee = swap_fee_math::calc_swap_fee_in_discount(self.swap_fee, x_amount)?;
 
-        let wrapped_amount_in = self.calc_wrapped_amount(amount_in, token_in_index);
+        let wrapped_amount_in = self.calc_wrapped_amount(amount_in, token_in_index)?;
+
+        let token_in = self.tokens.get(token_in_index)?;
+        let token_out = self.tokens.get(token_out_index)?;
         let wrapped_amount_out_without_fee = weighted_math::calc_out_given_in(
-            self.tokens[token_in_index].balance,
-            self.tokens[token_in_index].weight,
-            self.tokens[token_out_index].balance,
-            self.tokens[token_out_index].weight,
+            token_in.balance,
+            token_in.weight,
+            token_out.balance,
+            token_out.weight,
             wrapped_amount_in,
         )?;
 
         let wrapped_amount_out = wrapped_amount_out_without_fee.mul_down(swap_fee.complement())?;
         let wrapped_amount_fee = wrapped_amount_out_without_fee.checked_sub(wrapped_amount_out)?;
-        let amount_out = self.calc_unwrapped_amount(wrapped_amount_out, token_out_index);
-        let amount_fee = self.calc_unwrapped_amount(wrapped_amount_fee, token_out_index);
+        let amount_out = self.calc_unwrapped_amount(wrapped_amount_out, token_out_index)?;
+        let amount_fee = self.calc_unwrapped_amount(wrapped_amount_fee, token_out_index)?;
 
         Some((amount_out, amount_fee))
     }
