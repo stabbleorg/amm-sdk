@@ -9,7 +9,7 @@ resolver = "2"
 anchor-lang = "*"
 anyhow = { version = "1.0.86" }
 rust_decimal = { version = "1.26.1" }
-jupiter-amm-interface = { git = "https://github.com/jup-ag/jupiter-amm-interface.git", branch = "feat/stabble" }
+jupiter-amm-interface = { git = "https://github.com/jup-ag/jupiter-amm-interface.git", rev = "abfb1abbdf574c5406193a67fae1d34e9d706f46" }
 spl-token = { version = "*", features = ["no-entrypoint"] }
 solana-program = { version = "*" }
 spl-associated-token-account = { version = "*", features = ["no-entrypoint"] }
