@@ -9,5 +9,5 @@ cpi = ["no-entrypoint"]
 no-entrypoint = []
 
 [dependencies]
-anchor-lang = "*"
-solana-program = "*"
+anchor-lang = { workspace = true }
+solana-program = { workspace = true }

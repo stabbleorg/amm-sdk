@@ -7,6 +7,6 @@ edition = "2021"
 name = "fixed_exp"
 
 [dependencies]
-fixed = "1.27.0"
-num-traits = "0.2.18"
-typenum = "1.17.0"
+fixed = { workspace = true }
+num-traits = { workspace = true }
+typenum = { workspace = true }
