@@ -65,7 +65,7 @@ impl FixedPow for u64 {
             _ => {
                 let base = U34F30::from_bits(self.mul_down(BITS_ONE)?);
                 let exp = U34F30::from_bits(rhs.mul_down(BITS_ONE)?);
-                base.powf(exp).to_bits().div_down(BITS_ONE)
+                base.powf(exp)?.to_bits().div_down(BITS_ONE)
             }
         }
     }
@@ -82,7 +82,7 @@ impl FixedPow for u64 {
             _ => {
                 let base = U34F30::from_bits(self.mul_up(BITS_ONE)?);
                 let exp = U34F30::from_bits(rhs.mul_up(BITS_ONE)?);
-                base.powf(exp).to_bits().div_up(BITS_ONE)
+                base.powf(exp)?.to_bits().div_up(BITS_ONE)
             }
         }
     }

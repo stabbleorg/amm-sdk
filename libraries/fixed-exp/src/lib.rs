@@ -7,7 +7,7 @@
 //! use fixed_exp::FixedPowF;
 //!
 //! let x = U34F30::from_num(4.0);
-//! assert_eq!(U34F30::from_num(8.0), x.powf(U34F30::from_num(1.5)));
+//! assert_eq!(U34F30::from_num(8.0), x.powf(U34F30::from_num(1.5)).unwrap());
 //! ```
 
 use std::cmp::{Ord, Ordering};
@@ -29,12 +29,12 @@ pub trait FixedPowF: Fixed {
     /// use fixed_exp::FixedPowF;
     ///
     /// let x = U34F30::from_num(4.0);
-    /// assert_eq!(U34F30::from_num(8.0), x.powf(U34F30::from_num(1.5)));
+    /// assert_eq!(U34F30::from_num(8.0), x.powf(U34F30::from_num(1.5)).unwrap());
     /// ```
-    fn powf(self, n: Self) -> Self;
+    fn powf(self, n: Self) -> Option<Self>;
 }
 
-fn powi<T: Fixed>(mut x: T, mut n: i32) -> T {
+fn powi<T: Fixed>(mut x: T, mut n: i32) -> Option<T> {
     // n cannot be zero
 
     let mut acc = x;
@@ -42,36 +42,36 @@ fn powi<T: Fixed>(mut x: T, mut n: i32) -> T {
 
     while n > 0 {
         if n & 1 == 1 {
-            acc *= x;
+            acc = acc.checked_mul(x)?;
         }
-        x *= x;
+        x = x.checked_mul(x)?;
         n >>= 1;
     }
 
-    acc
+    Some(acc)
 }
 
-fn sqrt<T>(x: T) -> T
+fn sqrt<T>(x: T) -> Option<T>
 where
     T: Fixed + Helper,
     T::Bits: PrimInt,
 {
     if x.is_zero() || x.is_one() {
-        return x;
+        return Some(x);
     }
 
-    let mut pow2 = T::one();
+    let mut pow2 = T::one()?;
     let mut result;
 
-    if x < T::one() {
-        while x <= pow2 * pow2 {
+    if x < T::one()? {
+        while x <= pow2.checked_mul(pow2)? {
             pow2 >>= 1;
         }
 
         result = pow2;
     } else {
         // x >= T::one()
-        while pow2 * pow2 <= x {
+        while pow2.checked_mul(pow2)? <= x {
             pow2 <<= 1;
         }
 
@@ -80,16 +80,16 @@ where
 
     for _ in 0..T::NUM_BITS {
         pow2 >>= 1;
-        let next_result = result + pow2;
-        if next_result * next_result <= x {
+        let next_result = result.checked_add(pow2)?;
+        if next_result.checked_mul(next_result)? <= x {
             result = next_result;
         }
     }
 
-    result
+    Some(result)
 }
 
-fn powf_01<T>(mut x: T, n: T) -> T
+fn powf_01<T>(mut x: T, n: T) -> Option<T>
 where
     T: Fixed + Helper,
     T::Bits: PrimInt + std::fmt::Debug,
@@ -97,12 +97,12 @@ where
     // n cannot be zero
     let mut n = n.to_bits();
 
-    let top = T::Bits::one() << ((T::Frac::U32 - 1) as usize);
+    let top = T::Bits::one() << ((T::Frac::U32).checked_sub(1)? as usize);
     let mask = !(T::Bits::one() << ((T::Frac::U32) as usize));
     let mut acc = None;
 
     while !n.is_zero() {
-        x = sqrt(x);
+        x = sqrt(x)?;
         if !(n & top).is_zero() {
             acc = match acc {
                 Some(acc) => Some(acc * x),
@@ -112,16 +112,16 @@ where
         n = (n << 1) & mask;
     }
 
-    acc.unwrap()
+    acc
 }
 
-fn powf<T>(x: T, n: T) -> T
+fn powf<T>(x: T, n: T) -> Option<T>
 where
     T: Fixed + Helper,
     T::Bits: PrimInt + std::fmt::Debug,
 {
     if x.is_zero() {
-        return T::ZERO;
+        return Some(T::ZERO);
     }
 
     let int = n.int();
@@ -139,7 +139,7 @@ where
         if frac.is_zero() {
             powi
         } else {
-            powi * powf_01(x, frac)
+            powi?.checked_mul(powf_01(x, frac)?)
         }
     }
 }
@@ -150,20 +150,24 @@ macro_rules! impl_fixed_pow {
         where
             Frac: $le_eq + IsLessOrEqual<$le_eq_one, Output = True>,
         {
-            fn powf(self, n: Self) -> Self {
+            fn powf(self, n: Self) -> Option<Self> {
                 let zero = Self::from_bits(0);
 
                 if !<LeEq<Frac, $le_eq_one>>::BOOL && n <= zero {
-                    panic!(
-                        "cannot raise `{}` to the power of `{}` because numbers larger than or equal to `1` are not representable",
-                        self, n
-                    );
+                    // panic!(
+                    //     "cannot raise `{}` to the power of `{}` because numbers larger than or equal to `1` are not representable",
+                    //     self, n
+                    // );
+                    return None;
                 }
 
                 match n.cmp(&zero) {
                     Ordering::Greater => powf(self, n),
-                    Ordering::Equal => Self::from_bits(1 << Frac::U32),
-                    Ordering::Less => powf(Self::from_bits(1 << Frac::U32) / self, Helper::neg(n)),
+                    Ordering::Equal => Some(Self::from_bits(1 << Frac::U32)),
+                    Ordering::Less => powf(
+                        Self::from_bits(1 << Frac::U32).checked_div(self)?,
+                        Helper::neg(n)?,
+                    ),
                 }
             }
         }
@@ -175,8 +179,12 @@ impl_fixed_pow!(FixedU64, LeEqU64, U63);
 trait Helper {
     const NUM_BITS: u32;
     fn is_one(self) -> bool;
-    fn one() -> Self;
-    fn neg(self) -> Self;
+    fn one() -> Option<Self>
+    where
+        Self: Sized;
+    fn neg(self) -> Option<Self>
+    where
+        Self: Sized;
 }
 
 macro_rules! impl_sign_helper {
@@ -189,15 +197,15 @@ macro_rules! impl_sign_helper {
             fn is_one(self) -> bool {
                 <LeEq<Frac, $le_eq_one>>::BOOL && self.to_bits() == 1 << Frac::U32
             }
-            fn one() -> Self {
-                assert!(
-                    <LeEq<Frac, $le_eq_one>>::BOOL,
-                    "one should be possible to represent"
-                );
-                Self::from_bits(1 << Frac::U32)
+            fn one() -> Option<Self> {
+                if <LeEq<Frac, $le_eq_one>>::BOOL {
+                    Some(Self::from_bits(1 << Frac::U32))
+                } else {
+                    None
+                }
             }
-            fn neg(self) -> Self {
-                -self
+            fn neg(self) -> Option<Self> {
+                Some(-self)
             }
         }
     };
@@ -210,15 +218,15 @@ macro_rules! impl_sign_helper {
             fn is_one(self) -> bool {
                 <LeEq<Frac, $le_eq_one>>::BOOL && self.to_bits() == 1 << Frac::U32
             }
-            fn one() -> Self {
-                assert!(
-                    <LeEq<Frac, $le_eq_one>>::BOOL,
-                    "one should be possible to represent"
-                );
-                Self::from_bits(1 << Frac::U32)
+            fn one() -> Option<Self> {
+                if <LeEq<Frac, $le_eq_one>>::BOOL {
+                    Some(Self::from_bits(1 << Frac::U32))
+                } else {
+                    None
+                }
             }
-            fn neg(self) -> Self {
-                panic!("cannot negate an unsigned number")
+            fn neg(self) -> Option<Self> {
+                None
             }
         }
     };
@@ -259,7 +267,7 @@ mod tests {
         ];
 
         for &(x, n) in test_cases {
-            assert!(delta(powf_float(x, n), x.powf(n)) < epsilon);
+            assert!(delta(powf_float(x, n), x.powf(n).unwrap()) < epsilon);
         }
     }
 }

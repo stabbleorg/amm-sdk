@@ -67,7 +67,10 @@ impl CheckedMulDiv for u64 {
     type Output = u64;
 
     fn checked_mul_div_down(self, num: Self, denom: Self) -> Option<Self::Output> {
-        assert_ne!(denom, 0);
+        if denom == 0 {
+            return None;
+        }
+
         let r = (self as u128).checked_mul(num as u128)?.checked_div(denom as u128)?;
         if r > u64::MAX as u128 {
             None
@@ -77,7 +80,10 @@ impl CheckedMulDiv for u64 {
     }
 
     fn checked_mul_div_up(self, num: Self, denom: Self) -> Option<Self::Output> {
-        assert_ne!(denom, 0);
+        if denom == 0 {
+            return None;
+        }
+
         let r = (self as u128)
             .checked_mul(num as u128)?
             .checked_add(denom.saturating_sub(1) as u128)?
@@ -94,7 +100,10 @@ impl CheckedDivCeil for u64 {
     type Output = u64;
 
     fn checked_div_up(self, denom: Self) -> Option<Self::Output> {
-        assert_ne!(denom, 0);
+        if denom == 0 {
+            return None;
+        }
+
         let r = (self as u128)
             .checked_add(denom.saturating_sub(1) as u128)?
             .checked_div(denom as u128)?;
@@ -110,7 +119,10 @@ impl CheckedMulDiv for U192 {
     type Output = U192;
 
     fn checked_mul_div_down(self, num: Self, denom: Self) -> Option<Self::Output> {
-        assert_ne!(denom, U192::default());
+        if denom == U192::default() {
+            return None;
+        }
+
         let r = self.checked_mul(num)?.checked_div(denom)?;
         if r > u128::MAX.as_u192() {
             None
@@ -120,7 +132,10 @@ impl CheckedMulDiv for U192 {
     }
 
     fn checked_mul_div_up(self, num: Self, denom: Self) -> Option<Self::Output> {
-        assert_ne!(denom, U192::default());
+        if denom == U192::default() {
+            return None;
+        }
+
         let r = self.checked_mul(num)?.checked_add(denom - 1)?.checked_div(denom)?;
         if r > u128::MAX.as_u192() {
             None
@@ -134,7 +149,10 @@ impl CheckedDivCeil for U192 {
     type Output = U192;
 
     fn checked_div_up(self, denom: Self) -> Option<Self::Output> {
-        assert_ne!(denom, U192::default());
+        if denom == U192::default() {
+            return None;
+        }
+
         let r = self.checked_add(denom - 1)?.checked_div(denom)?;
         if r > u128::MAX.as_u192() {
             None
@@ -148,7 +166,10 @@ impl CheckedDivFloor for U192 {
     type Output = U192;
 
     fn checked_div_down(self, denom: Self) -> Option<Self::Output> {
-        assert_ne!(denom, U192::default());
+        if denom == U192::default() {
+            return None;
+        }
+
         let r = self.checked_div(denom)?;
         if r > u128::MAX.as_u192() {
             None
