@@ -6,8 +6,8 @@ use crate::fixed_math::FixedPow;
 
 // A minimum normalized weight imposes a maximum weight ratio. We need this due to limitations in the
 // implementation of the power function, as these ratios are often exponents.
-pub const MIN_WEIGHT: u64 = 100_000_000; // 10%
-pub const MAX_WEIGHT: u64 = 900_000_000; // 90%
+pub const MIN_WEIGHT: u64 = 50_000_000; // 5%
+pub const MAX_WEIGHT: u64 = 950_000_000; // 95%
 
 pub const MIN_SWAP_FEE: u64 = 100_000; // 0.01%
 pub const MAX_SWAP_FEE: u64 = 25_000_000; // 2.5%
@@ -331,6 +331,13 @@ mod tests {
         )
         .unwrap();
         assert_eq!(invariant, 3999999916139535002);
+
+        let invariant = calc_invariant(
+            &vec![4_000_000_000_000_000_000, 4_000_000_000_000_000_000],
+            &vec![50_000_000, 950_000_000],
+        )
+        .unwrap();
+        assert_eq!(invariant, 3999999908179373469);
     }
 
     #[test]
@@ -374,6 +381,16 @@ mod tests {
         )
         .unwrap();
         assert_eq!(amount_out, 390121823);
+
+        let amount_out = calc_out_given_in(
+            366851436508161000,
+            50_000_000,
+            958530278657000,
+            950_000_000,
+            100_000_000_000,
+        )
+        .unwrap();
+        assert_eq!(amount_out, 25880317);
     }
 
     #[test]
@@ -427,6 +444,16 @@ mod tests {
         )
         .unwrap();
         assert_eq!(amount_out, 2236003831023460);
+
+        let amount_out = calc_pool_token_out_given_exact_tokens_in(
+            &vec![5_000_000_000_000_000_000, 1_000_000_000_000_000_000],
+            &vec![50_000_000, 950_000_000],
+            &vec![5_000_000_000_000_000 >> 1, 1_000_000_000_000_000 >> 1],
+            2236021719197214567 << 1,
+            10_000_000,
+        )
+        .unwrap();
+        assert_eq!(amount_out, 2235968054675953);
     }
 
     #[test]
@@ -450,5 +477,25 @@ mod tests {
         )
         .unwrap();
         assert_eq!(amount_out, 986045000000);
+
+        let amount_out = calc_token_out_given_exact_pool_token_in(
+            1_000_000_000_000_000_000,
+            50_000_000,
+            2222605588882,
+            2236021719197214567 << 1,
+            10_000_000,
+        )
+        .unwrap();
+        assert_eq!(amount_out, 9814864500000);
+
+        let amount_out = calc_token_out_given_exact_pool_token_in(
+            1_000_000_000_000_000_000,
+            950_000_000,
+            2222605588882,
+            2236021719197214567 << 1,
+            10_000_000,
+        )
+        .unwrap();
+        assert_eq!(amount_out, 532733500000);
     }
 }
