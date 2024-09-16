@@ -1,0 +1,410 @@
+{
+  "address": "vo1tWgqZMjG61Z2T9qUaMYKqZ75CYzMuaZ2LZP1n7HV",
+  "metadata": {
+    "name": "vault",
+    "version": "1.0.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "accept_admin",
+      "discriminator": [
+        112,
+        42,
+        45,
+        90,
+        116,
+        181,
+        13,
+        170
+      ],
+      "accounts": [
+        {
+          "name": "pending_admin",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "change_beneficiary",
+      "discriminator": [
+        110,
+        79,
+        77,
+        10,
+        30,
+        181,
+        18,
+        1
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_beneficiary",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "change_beneficiary_fee",
+      "discriminator": [
+        47,
+        164,
+        28,
+        91,
+        72,
+        42,
+        199,
+        21
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_beneficiary_fee",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "initialize",
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "vault_authority"
+        }
+      ],
+      "args": [
+        {
+          "name": "withdraw_authority",
+          "type": "pubkey"
+        },
+        {
+          "name": "withdraw_authority_bump",
+          "type": "u8"
+        },
+        {
+          "name": "beneficiary",
+          "type": "pubkey"
+        },
+        {
+          "name": "beneficiary_fee",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "pause",
+      "discriminator": [
+        211,
+        22,
+        221,
+        251,
+        74,
+        121,
+        193,
+        47
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "reject_admin",
+      "discriminator": [
+        253,
+        12,
+        169,
+        115,
+        88,
+        117,
+        177,
+        252
+      ],
+      "accounts": [
+        {
+          "name": "pending_admin",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "transfer_admin",
+      "discriminator": [
+        42,
+        242,
+        66,
+        106,
+        228,
+        10,
+        111,
+        156
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_admin",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "unpause",
+      "discriminator": [
+        169,
+        144,
+        4,
+        38,
+        10,
+        141,
+        188,
+        255
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "withdraw",
+      "discriminator": [
+        183,
+        18,
+        70,
+        156,
+        148,
+        109,
+        161,
+        34
+      ],
+      "accounts": [
+        {
+          "name": "withdraw_authority",
+          "signer": true
+        },
+        {
+          "name": "vault"
+        },
+        {
+          "name": "vault_authority"
+        },
+        {
+          "name": "vault_token",
+          "writable": true
+        },
+        {
+          "name": "dest_token",
+          "writable": true
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "beneficiary_amount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Vault",
+      "discriminator": [
+        211,
+        8,
+        232,
+        43,
+        2,
+        152,
+        117,
+        119
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "VaultUpdatedEvent",
+      "discriminator": [
+        11,
+        93,
+        32,
+        99,
+        27,
+        33,
+        188,
+        225
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "SlippageOutOfRange",
+      "msg": "Slippage is out of range"
+    }
+  ],
+  "types": [
+    {
+      "name": "Vault",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "withdraw_authority",
+            "docs": [
+              "PDA of pool programs seeded by vault address"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "withdraw_authority_bump",
+            "docs": [
+              "bump seed of withdraw_authority PDA"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "authority_bump",
+            "docs": [
+              "bump seed of vault_authority PDA"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "is_active",
+            "type": "bool"
+          },
+          {
+            "name": "beneficiary",
+            "type": "pubkey"
+          },
+          {
+            "name": "beneficiary_fee",
+            "type": "u64"
+          },
+          {
+            "name": "pending_admin",
+            "type": {
+              "option": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultUpdatedData",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "is_active",
+            "type": "bool"
+          },
+          {
+            "name": "beneficiary_fee",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultUpdatedEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pubkey",
+            "type": "pubkey"
+          },
+          {
+            "name": "data",
+            "type": {
+              "defined": {
+                "name": "VaultUpdatedData"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

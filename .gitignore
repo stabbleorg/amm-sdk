@@ -2,3 +2,7 @@
 target
 test-ledger
 Cargo.lock
+.npmrc
+dist
+node_modules
+yarn.lock

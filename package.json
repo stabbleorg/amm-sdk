@@ -1,0 +1,25 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "rm -rf dist && tsc",
+    "lint": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
+    "format": "rustfmt programs/**/src/lib.rs libraries/**/src/lib.rs"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "devDependencies": {
+    "@coral-xyz/anchor": "^0.30.1",
+    "@solana/spl-token": "^0.3.11",
+    "@solana/web3.js": "^1.93.4",
+    "@types/bn.js": "^5.1.0",
+    "@types/chai": "^4.3.5",
+    "@types/mocha": "^10.0.1",
+    "chai": "^4.3.7",
+    "mocha": "^10.2.0",
+    "prettier": "^3.3.3",
+    "rustfmt": "^0.1.0",
+    "ts-mocha": "^10.0.0",
+    "typescript": "^5.5.4"
+  }
+}
