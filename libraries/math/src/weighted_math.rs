@@ -178,7 +178,7 @@ pub fn calc_pool_token_out_given_exact_tokens_in(
     pool_token_supply: u64,
     swap_fee: u64,
 ) -> Option<u64> {
-    let mut balance_ratios_with_fee = vec![];
+    let mut balance_ratios_with_fee = Vec::with_capacity(balances.len());
     let mut invariant_ratio_with_fees = 0;
 
     for i in 0..balances.len() {

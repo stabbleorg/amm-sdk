@@ -1,6 +1,6 @@
 use crate::fixed_math::{self, FixedComplement, FixedDiv, FixedMul};
 use bn::{
-    safe_math::{CheckedDivCeil, CheckedMulDiv},
+    safe_math::{CheckedDivCeil, CheckedMulDiv, Downcast},
     uint192, U192,
 };
 
@@ -48,7 +48,6 @@ pub fn calc_invariant(amplification: u64, balances: &Vec<u64>) -> Option<u64> {
     let amp_times_total = amplification.checked_mul(num_tokens)?; // Ann in the Curve version
 
     let sum = uint192!(sum);
-    let mut prev_invariant; // Dprev in the Curve version
     let mut invariant = sum; // D in the Curve version
 
     for _ in 0..255 {
@@ -59,7 +58,7 @@ pub fn calc_invariant(amplification: u64, balances: &Vec<u64>) -> Option<u64> {
             p = p.checked_mul_div_down(invariant, uint192!(balances[i].checked_mul(num_tokens)?))?;
         }
 
-        prev_invariant = invariant;
+        let prev_invariant = invariant; // Dprev in the Curve version
 
         invariant = (uint192!(amp_times_total)
             .checked_mul_div_down(sum, amp_precision_u192())?
@@ -71,8 +70,8 @@ pub fn calc_invariant(amplification: u64, balances: &Vec<u64>) -> Option<u64> {
                 .checked_add(uint192!(num_tokens.saturating_add(1)).checked_mul(p)?)?,
         )?;
 
-        let invariant = invariant.as_u64();
-        let prev_invariant = prev_invariant.as_u64();
+        let invariant = invariant.as_u64()?;
+        let prev_invariant = prev_invariant.as_u64()?;
 
         if invariant > prev_invariant {
             if invariant.saturating_sub(prev_invariant) <= INV_THRESHOLD {
@@ -110,7 +109,7 @@ pub fn calc_out_given_in(
      **************************************************************************************************************/
     // Amount out, so we round down overall.
 
-    let mut new_balances = vec![];
+    let mut new_balances = Vec::with_capacity(balances.len());
     for i in 0..balances.len() {
         if i == token_index_in {
             new_balances.push(balances[i].checked_add(token_amount_in)?);
@@ -151,7 +150,7 @@ pub fn calc_in_given_out(
     // P = product of final balances but x                                                                       //
      **************************************************************************************************************/
     // Amount in, so we round up overall.
-    let mut new_balances = vec![];
+    let mut new_balances = Vec::with_capacity(balances.len());
     for i in 0..balances.len() {
         if i == token_index_out {
             new_balances.push(balances[i].checked_sub(token_amount_out)?);
@@ -184,7 +183,7 @@ pub fn calc_pool_token_out_given_exact_tokens_in(
     let sum: u64 = balances.iter().sum();
 
     // Calculate the weighted balance ratio without considering fees
-    let mut balance_ratios_with_fee = vec![];
+    let mut balance_ratios_with_fee = Vec::with_capacity(balances.len());
     // The weighted sum of token balance ratios with fee
     let mut invariant_ratio_with_fees = 0;
     for i in 0..balances.len() {
@@ -196,7 +195,7 @@ pub fn calc_pool_token_out_given_exact_tokens_in(
     }
 
     // Second loop calculates new amounts in, taking into account the fee on the percentage excess
-    let mut new_balances = vec![];
+    let mut new_balances = Vec::with_capacity(balances.len());
     for i in 0..balances.len() {
         let amount_in_without_fee;
 
@@ -238,8 +237,9 @@ pub fn calc_token_out_given_exact_pool_token_in(
 ) -> Option<u64> {
     // Token out, so we round down overall.
 
-    let new_invariant =
-        (pool_token_supply.checked_sub(amount_in)?).checked_mul_div_up(current_invariant, pool_token_supply)?;
+    let new_invariant = pool_token_supply
+        .checked_sub(amount_in)?
+        .checked_mul_div_up(current_invariant, pool_token_supply)?;
 
     let balance = *balances.get(token_index)?;
 
@@ -305,13 +305,12 @@ fn get_token_balance_given_invariant_n_all_other_balances(
         .checked_add(sum)?;
 
     // We iterate to find the balance
-    let mut prev_token_balance;
     // We multiply the first iteration outside the loop with the invariant to set the value of the
     // initial approximation.
     let mut token_balance = invariant_2.checked_add(c)?.checked_div_up(invariant.checked_add(b)?)?;
 
     for _ in 0..255 {
-        prev_token_balance = token_balance;
+        let prev_token_balance = token_balance;
 
         token_balance = token_balance
             .checked_mul(token_balance)?
@@ -321,8 +320,8 @@ fn get_token_balance_given_invariant_n_all_other_balances(
                 (token_balance << 1).checked_add(b)?.checked_sub(invariant)?, // token_balance * 2 + b - invariant
             )?;
 
-        let token_balance = token_balance.as_u64();
-        let prev_token_balance = prev_token_balance.as_u64();
+        let token_balance = token_balance.as_u64()?;
+        let prev_token_balance = prev_token_balance.as_u64()?;
 
         if token_balance > prev_token_balance {
             if token_balance.saturating_sub(prev_token_balance) <= BALANCE_THRESHOLD {

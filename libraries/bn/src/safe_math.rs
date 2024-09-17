@@ -46,9 +46,7 @@ pub trait Upcast {
 }
 
 pub trait Downcast {
-    /// Unsafe cast to U128
-    /// Bits beyond the 128th position are lost
-    fn as_u128(self) -> u128;
+    fn as_u64(self) -> Option<u64>;
 }
 
 impl Upcast for u128 {
@@ -58,8 +56,12 @@ impl Upcast for u128 {
 }
 
 impl Downcast for U192 {
-    fn as_u128(self) -> u128 {
-        self.0[0] as u128 + ((self.0[1] as u128) << 64)
+    fn as_u64(self) -> Option<u64> {
+        if !self.fits_word() {
+            return None;
+        }
+
+        Some(self.0[0])
     }
 }
 
@@ -183,12 +185,12 @@ impl CheckedDivFloor for U192 {
 mod tests {
     use super::*;
 
-    use crate::uint192;
-
     #[test]
     fn test_casting_overflow() {
         assert_eq!(uint192!(0), U192::zero());
-        assert_eq!(uint192!(u64::MAX).as_u64(), u64::MAX);
+        assert_eq!(U192::one().as_u64().unwrap(), 1);
+        assert_eq!(uint192!(u64::MAX).as_u64().unwrap(), u64::MAX);
+        assert_eq!(uint192!(u64::MAX).checked_add(U192::one()).unwrap().as_u64(), None);
         assert_eq!(uint192!(u128::MAX).as_u128(), u128::MAX);
         assert_eq!(uint192!(u128::MAX), u128::MAX.as_u192());
     }

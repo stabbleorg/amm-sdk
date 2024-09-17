@@ -18,9 +18,10 @@ pub fn compute_proportional_amounts_in(
     // Since we're computing amounts in, we round up overall. This means rounding up on both the
     // multiplication and division.
 
-    let mut amounts_in: Vec<u64> = vec![];
-    for i in 0..balances.len() {
-        amounts_in.push(balances[i].checked_mul_div_up(amount_out, pool_token_supply)?);
+    let mut amounts_in = Vec::with_capacity(balances.len());
+    for &balance in balances {
+        let amount = balance.checked_mul_div_up(amount_out, pool_token_supply)?;
+        amounts_in.push(amount);
     }
 
     Some(amounts_in)
@@ -44,9 +45,10 @@ pub fn compute_proportional_amounts_out(
     // Since we're computing an amount out, we round down overall. This means rounding down on both the
     // multiplication and division.
 
-    let mut amounts_out: Vec<u64> = vec![];
-    for i in 0..balances.len() {
-        amounts_out.push(balances[i].checked_mul_div_down(amount_in, pool_token_supply)?);
+    let mut amounts_out: Vec<u64> = Vec::with_capacity(balances.len());
+    for &balance in balances {
+        let amount = balance.checked_mul_div_down(amount_in, pool_token_supply)?;
+        amounts_out.push(amount);
     }
 
     Some(amounts_out)
