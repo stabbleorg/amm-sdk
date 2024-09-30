@@ -2,7 +2,7 @@
   "address": "vo1tWgqZMjG61Z2T9qUaMYKqZ75CYzMuaZ2LZP1n7HV",
   "metadata": {
     "name": "vault",
-    "version": "1.0.0",
+    "version": "1.3.0",
     "spec": "0.1.0",
     "description": "Created with Anchor"
   },
@@ -279,6 +279,60 @@
           "type": "u64"
         }
       ]
+    },
+    {
+      "name": "withdraw_v2",
+      "discriminator": [
+        242,
+        80,
+        163,
+        0,
+        196,
+        221,
+        194,
+        194
+      ],
+      "accounts": [
+        {
+          "name": "withdraw_authority",
+          "signer": true
+        },
+        {
+          "name": "vault"
+        },
+        {
+          "name": "vault_authority"
+        },
+        {
+          "name": "vault_token",
+          "writable": true
+        },
+        {
+          "name": "dest_token",
+          "writable": true
+        },
+        {
+          "name": "beneficiary_token",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "beneficiary_amount",
+          "type": "u64"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -314,8 +368,8 @@
   "errors": [
     {
       "code": 6000,
-      "name": "SlippageOutOfRange",
-      "msg": "Slippage is out of range"
+      "name": "SlippageExceeded",
+      "msg": "Slippage exceeded"
     }
   ],
   "types": [

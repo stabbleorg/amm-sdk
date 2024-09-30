@@ -1,4 +1,4 @@
-import { NATIVE_MINT } from "@solana/spl-token";
+import { NATIVE_MINT, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { Keypair, PublicKey, Signer, TransactionInstruction, TransactionSignature } from "@solana/web3.js";
 import { FloatLike, TransactionArgs } from "@stabbleorg/anchor-contrib";
 import { Pool, StablePool, StablePoolData, WeightedPool, WeightedPoolData } from "../accounts";
@@ -27,6 +27,8 @@ export type SwapInstructionArgs = {
   mintOutAddress: PublicKey;
   tokenInAddress?: PublicKey;
   tokenOutAddress?: PublicKey;
+  tokenInProgramId?: PublicKey;
+  tokenOutProgramId?: PublicKey;
   amountIn?: FloatLike;
   minimumAmountOut?: FloatLike;
 };
@@ -44,7 +46,7 @@ export class Swap {
   }: TransactionArgs<{
     weightedSwap: WeightedSwapContext;
     stableSwap: StableSwapContext;
-    routes: BatchSwapRoute[];
+    routes: Omit<BatchSwapRoute, "amountOut">[];
     amountIn: FloatLike;
     minimumAmountOut: FloatLike;
     referrer?: string;
@@ -80,8 +82,10 @@ export class Swap {
 
       if (referrer) instructions.push(createMemoInstruction(referrer));
 
-      let tokenInAddress: PublicKey | undefined = undefined;
+      let tokenInAddress, tokenInProgramId;
       if (routes[0].mintInAddress.equals(NATIVE_MINT)) {
+        tokenInProgramId = TOKEN_PROGRAM_ID;
+
         const keypair = Keypair.generate();
         signers.push(keypair);
         tokenInAddress = keypair.publicKey;
@@ -92,12 +96,17 @@ export class Swap {
         closeInstructions.push(weightedSwap.closeTokenAccountInstruction(tokenInAddress));
       }
 
-      let tokenOutAddress: PublicKey | undefined = undefined;
+      let tokenOutAddress, tokenOutProgramId;
       {
+        const account = await weightedSwap.provider.connection.getAccountInfo(routes[0].mintOutAddress);
+        tokenOutProgramId = account!.owner;
+
         const keypair = Keypair.generate();
         signers.push(keypair);
         tokenOutAddress = keypair.publicKey;
-        instructions.push(...weightedSwap.createTokenAccountInstructions(tokenOutAddress, routes[0].mintOutAddress));
+        instructions.push(
+          ...weightedSwap.createTokenAccountInstructions(tokenOutAddress, routes[0].mintOutAddress, tokenOutProgramId),
+        );
         closeInstructions.push(weightedSwap.closeTokenAccountInstruction(tokenOutAddress));
       }
 
@@ -108,6 +117,8 @@ export class Swap {
         amountIn,
         tokenInAddress,
         tokenOutAddress,
+        tokenInProgramId,
+        tokenOutProgramId,
       };
 
       if (routes[0].pool instanceof WeightedPool) {
@@ -119,7 +130,10 @@ export class Swap {
       }
 
       tokenInAddress = tokenOutAddress;
+      tokenInProgramId = tokenOutProgramId;
       if (routes[1].mintOutAddress.equals(NATIVE_MINT)) {
+        tokenOutProgramId = TOKEN_PROGRAM_ID;
+
         const keypair = Keypair.generate();
         signers.push(keypair);
         tokenOutAddress = keypair.publicKey;
@@ -127,6 +141,7 @@ export class Swap {
         closeInstructions.push(weightedSwap.closeTokenAccountInstruction(tokenOutAddress));
       } else {
         tokenOutAddress = undefined;
+        tokenOutProgramId = undefined;
       }
 
       const args1: SwapInstructionArgs = {
@@ -136,6 +151,8 @@ export class Swap {
         minimumAmountOut,
         tokenInAddress,
         tokenOutAddress,
+        tokenInProgramId,
+        tokenOutProgramId,
       };
 
       if (routes[1].pool instanceof WeightedPool) {
@@ -163,8 +180,10 @@ export class Swap {
 
       if (referrer) instructions.push(createMemoInstruction(referrer));
 
-      let tokenInAddress: PublicKey | undefined = undefined;
+      let tokenInAddress, tokenInProgramId;
       if (routes[0].mintInAddress.equals(NATIVE_MINT)) {
+        tokenInProgramId = TOKEN_PROGRAM_ID;
+
         const keypair = Keypair.generate();
         signers.push(keypair);
         tokenInAddress = keypair.publicKey;
@@ -176,12 +195,17 @@ export class Swap {
         shouldSplit = true;
       }
 
-      let tokenOutAddress: PublicKey | undefined = undefined;
+      let tokenOutAddress, tokenOutProgramId;
       {
+        const account = await weightedSwap.provider.connection.getAccountInfo(routes[0].mintOutAddress);
+        tokenOutProgramId = account!.owner;
+
         const keypair = Keypair.generate();
         signers.push(keypair);
         tokenOutAddress = keypair.publicKey;
-        instructions.push(...weightedSwap.createTokenAccountInstructions(tokenOutAddress, routes[0].mintOutAddress));
+        instructions.push(
+          ...weightedSwap.createTokenAccountInstructions(tokenOutAddress, routes[0].mintOutAddress, tokenOutProgramId),
+        );
         closeInstructions.push(weightedSwap.closeTokenAccountInstruction(tokenOutAddress));
       }
 
@@ -192,6 +216,8 @@ export class Swap {
         amountIn,
         tokenInAddress,
         tokenOutAddress,
+        tokenInProgramId,
+        tokenOutProgramId,
       };
 
       if (routes[0].pool instanceof WeightedPool) {
@@ -203,11 +229,17 @@ export class Swap {
       }
 
       tokenInAddress = tokenOutAddress;
+      tokenInProgramId = tokenOutProgramId;
       {
+        const account = await weightedSwap.provider.connection.getAccountInfo(routes[0].mintOutAddress);
+        tokenOutProgramId = account!.owner;
+
         const keypair = Keypair.generate();
         signers.push(keypair);
         tokenOutAddress = keypair.publicKey;
-        instructions.push(...weightedSwap.createTokenAccountInstructions(tokenOutAddress, routes[1].mintOutAddress));
+        instructions.push(
+          ...weightedSwap.createTokenAccountInstructions(tokenOutAddress, routes[1].mintOutAddress, tokenOutProgramId),
+        );
         closeInstructions.push(weightedSwap.closeTokenAccountInstruction(tokenOutAddress));
       }
 
@@ -217,6 +249,8 @@ export class Swap {
         mintOutAddress: routes[1].mintOutAddress,
         tokenInAddress,
         tokenOutAddress,
+        tokenInProgramId,
+        tokenOutProgramId,
       };
 
       if (routes[1].pool instanceof WeightedPool) {
@@ -228,6 +262,7 @@ export class Swap {
       }
 
       tokenInAddress = tokenOutAddress;
+      tokenInProgramId = tokenOutProgramId;
       if (routes[2].mintOutAddress.equals(NATIVE_MINT)) {
         const keypair = Keypair.generate();
         signers.push(keypair);
@@ -236,6 +271,7 @@ export class Swap {
         closeInstructions.push(weightedSwap.closeTokenAccountInstruction(tokenOutAddress));
       } else {
         tokenOutAddress = undefined;
+        tokenOutProgramId = undefined;
       }
 
       const args2: SwapInstructionArgs = {
@@ -245,6 +281,8 @@ export class Swap {
         minimumAmountOut,
         tokenInAddress,
         tokenOutAddress,
+        tokenInProgramId,
+        tokenOutProgramId,
       };
       if (routes[2].pool instanceof WeightedPool) {
         instructions.push(...(await weightedSwap.swapInstructions(args2)));

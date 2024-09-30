@@ -34,6 +34,7 @@ pub trait FixedPowF: Fixed {
     fn powf(self, n: Self) -> Option<Self>;
 }
 
+#[inline(always)]
 fn powi<T: Fixed>(mut x: T, mut n: i32) -> Option<T> {
     // n cannot be zero
 
@@ -51,6 +52,7 @@ fn powi<T: Fixed>(mut x: T, mut n: i32) -> Option<T> {
     Some(acc)
 }
 
+#[inline(always)]
 fn sqrt<T>(x: T) -> Option<T>
 where
     T: Fixed + Helper,
@@ -89,6 +91,7 @@ where
     Some(result)
 }
 
+#[inline(always)]
 fn powf_01<T>(mut x: T, n: T) -> Option<T>
 where
     T: Fixed + Helper,
@@ -115,6 +118,7 @@ where
     acc
 }
 
+#[inline(always)]
 fn powf<T>(x: T, n: T) -> Option<T>
 where
     T: Fixed + Helper,

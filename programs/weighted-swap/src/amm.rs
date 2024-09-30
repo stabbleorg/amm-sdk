@@ -116,6 +116,8 @@ impl Amm for WeightedSwap {
             swap: Swap::StabbleWeightedSwap,
             account_metas: WeightedSwapSwap {
                 user: *token_transfer_authority,
+                mint_in: *source_mint,
+                mint_out: *destination_mint,
                 user_token_in: *source_token_account,
                 user_token_out: *destination_token_account,
                 vault_token_in: vault_source_token_account,

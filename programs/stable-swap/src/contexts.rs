@@ -35,6 +35,7 @@ pub struct Deposit<'info> {
     pub vault: AccountInfo<'info>,
     pub vault_authority: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
+    pub token_2022_program: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -52,6 +53,7 @@ pub struct Withdraw<'info> {
     pub vault_authority: AccountInfo<'info>,
     pub vault_program: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
+    pub token_2022_program: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -78,6 +80,32 @@ pub struct Swap<'info> {
 }
 
 #[derive(Accounts)]
+pub struct SwapV2<'info> {
+    #[account(signer)]
+    pub user: AccountInfo<'info>,
+    pub mint_in: AccountInfo<'info>,
+    pub mint_out: AccountInfo<'info>,
+    #[account(mut)]
+    pub user_token_in: AccountInfo<'info>,
+    #[account(mut)]
+    pub user_token_out: AccountInfo<'info>,
+    #[account(mut)]
+    pub vault_token_in: AccountInfo<'info>,
+    #[account(mut)]
+    pub vault_token_out: AccountInfo<'info>,
+    #[account(mut)]
+    pub beneficiary_token_out: AccountInfo<'info>,
+    #[account(mut)]
+    pub pool: AccountInfo<'info>,
+    pub withdraw_authority: AccountInfo<'info>,
+    pub vault: AccountInfo<'info>,
+    pub vault_authority: UncheckedAccount<'info>,
+    pub vault_program: AccountInfo<'info>,
+    pub token_program: AccountInfo<'info>,
+    pub token_2022_program: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
 pub struct OwnerOnly<'info> {
     #[account(signer)]
     pub owner: AccountInfo<'info>,
@@ -91,4 +119,15 @@ pub struct PendingOwnerOnly<'info> {
     pub pending_owner: AccountInfo<'info>,
     #[account(mut)]
     pub pool: AccountInfo<'info>,
+}
+
+#[derive(Accounts)]
+pub struct AdminOnly<'info> {
+    #[account(signer)]
+    pub admin: AccountInfo<'info>,
+
+    #[account(mut)]
+    pub pool: AccountInfo<'info>,
+
+    pub vault: AccountInfo<'info>,
 }

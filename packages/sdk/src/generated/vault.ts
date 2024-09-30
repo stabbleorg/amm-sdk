@@ -8,7 +8,7 @@ export type Vault = {
   address: "vo1tWgqZMjG61Z2T9qUaMYKqZ75CYzMuaZ2LZP1n7HV";
   metadata: {
     name: "vault";
-    version: "1.0.0";
+    version: "1.3.0";
     spec: "0.1.0";
     description: "Created with Anchor";
   };
@@ -205,6 +205,51 @@ export type Vault = {
         },
       ];
     },
+    {
+      name: "withdrawV2";
+      discriminator: [242, 80, 163, 0, 196, 221, 194, 194];
+      accounts: [
+        {
+          name: "withdrawAuthority";
+          signer: true;
+        },
+        {
+          name: "vault";
+        },
+        {
+          name: "vaultAuthority";
+        },
+        {
+          name: "vaultToken";
+          writable: true;
+        },
+        {
+          name: "destToken";
+          writable: true;
+        },
+        {
+          name: "beneficiaryToken";
+          writable: true;
+          optional: true;
+        },
+        {
+          name: "mint";
+        },
+        {
+          name: "tokenProgram";
+        },
+      ];
+      args: [
+        {
+          name: "amount";
+          type: "u64";
+        },
+        {
+          name: "beneficiaryAmount";
+          type: "u64";
+        },
+      ];
+    },
   ];
   accounts: [
     {
@@ -221,8 +266,8 @@ export type Vault = {
   errors: [
     {
       code: 6000;
-      name: "slippageOutOfRange";
-      msg: "Slippage is out of range";
+      name: "slippageExceeded";
+      msg: "Slippage exceeded";
     },
   ];
   types: [

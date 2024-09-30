@@ -8,7 +8,7 @@ export type StableSwap = {
   address: "swapNyd8XiQwJ6ianp9snpu4brUqFxadzvHebnAXjJZ";
   metadata: {
     name: "stableSwap";
-    version: "1.0.0";
+    version: "1.3.0";
     spec: "0.1.0";
     description: "Created with Anchor";
   };
@@ -33,12 +33,15 @@ export type StableSwap = {
       discriminator: [56, 238, 189, 35, 200, 157, 42, 66];
       accounts: [
         {
-          name: "owner";
-          signer: true;
-        },
-        {
           name: "pool";
           writable: true;
+        },
+        {
+          name: "vault";
+        },
+        {
+          name: "admin";
+          signer: true;
         },
       ];
       args: [
@@ -104,6 +107,9 @@ export type StableSwap = {
         },
         {
           name: "tokenProgram";
+        },
+        {
+          name: "tokenProgram2022";
         },
       ];
       args: [
@@ -271,6 +277,76 @@ export type StableSwap = {
       ];
     },
     {
+      name: "swapV2";
+      discriminator: [43, 4, 237, 11, 26, 201, 30, 98];
+      accounts: [
+        {
+          name: "user";
+          signer: true;
+        },
+        {
+          name: "mintIn";
+        },
+        {
+          name: "mintOut";
+        },
+        {
+          name: "userTokenIn";
+          writable: true;
+        },
+        {
+          name: "userTokenOut";
+          writable: true;
+        },
+        {
+          name: "vaultTokenIn";
+          writable: true;
+        },
+        {
+          name: "vaultTokenOut";
+          writable: true;
+        },
+        {
+          name: "beneficiaryTokenOut";
+          writable: true;
+        },
+        {
+          name: "pool";
+          writable: true;
+        },
+        {
+          name: "withdrawAuthority";
+        },
+        {
+          name: "vault";
+        },
+        {
+          name: "vaultAuthority";
+        },
+        {
+          name: "vaultProgram";
+        },
+        {
+          name: "tokenProgram";
+        },
+        {
+          name: "token2022Program";
+        },
+      ];
+      args: [
+        {
+          name: "amountIn";
+          type: {
+            option: "u64";
+          };
+        },
+        {
+          name: "minimumAmountOut";
+          type: "u64";
+        },
+      ];
+    },
+    {
       name: "transferOwner";
       discriminator: [245, 25, 221, 175, 106, 229, 225, 45];
       accounts: [
@@ -340,6 +416,9 @@ export type StableSwap = {
         },
         {
           name: "tokenProgram";
+        },
+        {
+          name: "tokenProgram2022";
         },
       ];
       args: [

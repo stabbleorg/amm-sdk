@@ -12,6 +12,7 @@ jupiter-amm-interface = { git = "https://github.com/jup-ag/jupiter-amm-interface
 rust_decimal = "1.26.1"
 solana-program = "1.18.22"
 spl-token = { version = "3", features = ["no-entrypoint"] }
+spl-token-2022 = { version = "4",  features = ["no-entrypoint"] }
 spl-associated-token-account = { version = "3", features = ["no-entrypoint"] }
 num-traits = "0.2"
 thiserror = "1.0"

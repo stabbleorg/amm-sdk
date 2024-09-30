@@ -1,6 +1,6 @@
 [package]
 name = "stabble-stable-swap"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 
 [features]
@@ -12,6 +12,7 @@ jupiter-amm = [
     "dep:rust_decimal",
     "dep:jupiter-amm-interface",
     "dep:spl-token",
+    "dep:spl-token-2022",
     "dep:spl-associated-token-account",
 ]
 
@@ -21,6 +22,7 @@ anyhow = { workspace = true, optional = true }
 rust_decimal = { workspace = true, optional = true }
 jupiter-amm-interface = { workspace = true, optional = true }
 spl-token = { workspace = true, optional = true }
+spl-token-2022 = { workspace = true, optional = true }
 spl-associated-token-account = { workspace = true, optional = true }
 bn = { path = "../../libraries/bn" }
 math = { path = "../../libraries/math" }
