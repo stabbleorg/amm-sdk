@@ -121,12 +121,12 @@ export class WeightedPool implements Pool<WeightedPoolData> {
     const tokenIn = this.data.tokens[tokenInIndex];
     const tokenOut = this.data.tokens[tokenOutIndex];
 
-    const scaingFactorIn = tokenIn.scalingFactor.toNumber();
-    const scaingFactorOut = tokenOut.scalingFactor.toNumber();
+    const scalingFactorIn = tokenIn.scalingFactor.toNumber();
+    const scalingFactorOut = tokenOut.scalingFactor.toNumber();
 
     const scalingRatio =
-      (tokenOut.scalingUp ? 1 / scaingFactorOut : scaingFactorOut) /
-      (tokenIn.scalingUp ? 1 / scaingFactorIn : scaingFactorIn);
+      (tokenOut.scalingUp ? 1 / scalingFactorOut : scalingFactorOut) /
+      (tokenIn.scalingUp ? 1 / scalingFactorIn : scalingFactorIn);
 
     const price = balanceRatio * scalingRatio;
 

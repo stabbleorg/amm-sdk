@@ -163,7 +163,7 @@ export class SwapParser {
             if (
               transferA &&
               transferAId &&
-              (transferAId.equals(TOKEN_PROGRAM_ID) || transferAId.equals(TOKEN_2022_PROGRAM_ID))
+              this.isTokenProgram(transferAId)
             ) {
               const withdrawVault = instructions[j + 2];
               if (withdrawVault && accountKeys.get(withdrawVault.programIdIndex)?.equals(AMM_VAULT_ID)) {
@@ -172,14 +172,14 @@ export class SwapParser {
                 if (
                   transferB &&
                   transferBId &&
-                  (transferBId.equals(TOKEN_PROGRAM_ID) || transferBId.equals(TOKEN_2022_PROGRAM_ID))
+                  this.isTokenProgram(transferAId)
                 ) {
                   const transferC = instructions[j + 4];
                   const transferCId = accountKeys.get(transferC.programIdIndex);
                   if (
                     transferC &&
                     transferCId &&
-                    (transferCId.equals(TOKEN_PROGRAM_ID) || transferCId.equals(TOKEN_2022_PROGRAM_ID))
+                    this.isTokenProgram(transferAId)
                   ) {
                     cpiSwapInstructions.push([instruction, transferA, withdrawVault, transferB, transferC]);
                     j += 4;
@@ -467,5 +467,9 @@ export class SwapParser {
       beneficiaryAddress,
       beneficiaryAmount,
     };
+  }
+
+  isTokenProgram(programId: PublicKey) {
+    return programId.equals(TOKEN_PROGRAM_ID) || programId.equals(TOKEN_2022_PROGRAM_ID);
   }
 }
