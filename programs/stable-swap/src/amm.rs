@@ -6,8 +6,8 @@ use anchor_lang::solana_program::pubkey::Pubkey;
 use anchor_lang::AccountDeserialize;
 use anyhow::Result;
 use jupiter_amm_interface::{
-    try_get_account_data, AccountMap, Amm, AmmContext, KeyedAccount, Quote, QuoteParams, Swap, SwapAndAccountMetas,
-    SwapParams,
+    try_get_account_data, AccountMap, Amm, AmmContext, ClockRef, KeyedAccount, Quote, QuoteParams, Swap,
+    SwapAndAccountMetas, SwapParams,
 };
 use math::fixed_math::SCALE;
 use rust_decimal::Decimal;
@@ -19,7 +19,7 @@ use std::sync::atomic::Ordering;
 pub struct StableSwap {
     key: Pubkey,
     state: Pool,
-    current_ts: i64,
+    clock_ref: ClockRef,
     beneficiary: Option<Pubkey>,
 }
 
@@ -28,7 +28,7 @@ impl Clone for StableSwap {
         StableSwap {
             key: self.key,
             state: self.state.clone(),
-            current_ts: self.current_ts.clone(),
+            clock_ref: self.clock_ref.clone(),
             beneficiary: self.beneficiary.clone(),
         }
     }
@@ -37,12 +37,11 @@ impl Clone for StableSwap {
 impl Amm for StableSwap {
     fn from_keyed_account(keyed_account: &KeyedAccount, amm_context: &AmmContext) -> Result<Self> {
         let state = Pool::try_deserialize(&mut &keyed_account.account.data[..]).unwrap();
-        let current_ts = amm_context.clock_ref.unix_timestamp.load(Ordering::SeqCst);
 
         Ok(Self {
             key: keyed_account.key,
             state,
-            current_ts,
+            clock_ref: amm_context.clock_ref.clone(),
             beneficiary: None,
         })
     }
@@ -86,9 +85,10 @@ impl Amm for StableSwap {
             .state
             .calc_rounded_amount(quote_params.amount, token_in_index)
             .unwrap();
+        let current_ts = self.clock_ref.unix_timestamp.load(Ordering::Relaxed);
         let (amount_out, amount_fee) = self
             .state
-            .get_swap_result(self.current_ts, token_in_index, token_out_index, quote_params.amount, 0)
+            .get_swap_result(current_ts, token_in_index, token_out_index, quote_params.amount, 0)
             .unwrap();
 
         Ok(Quote {

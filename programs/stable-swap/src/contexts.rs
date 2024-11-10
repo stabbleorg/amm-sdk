@@ -123,11 +123,9 @@ pub struct PendingOwnerOnly<'info> {
 
 #[derive(Accounts)]
 pub struct AdminOnly<'info> {
-    #[account(signer)]
-    pub admin: AccountInfo<'info>,
-
     #[account(mut)]
     pub pool: AccountInfo<'info>,
-
     pub vault: AccountInfo<'info>,
+    #[account(signer)]
+    pub admin: AccountInfo<'info>,
 }
