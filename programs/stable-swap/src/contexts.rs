@@ -92,3 +92,12 @@ pub struct PendingOwnerOnly<'info> {
     #[account(mut)]
     pub pool: AccountInfo<'info>,
 }
+
+#[derive(Accounts)]
+pub struct AdminOnly<'info> {
+    #[account(mut)]
+    pub pool: AccountInfo<'info>,
+    pub vault: AccountInfo<'info>,
+    #[account(signer)]
+    pub admin: AccountInfo<'info>,
+}

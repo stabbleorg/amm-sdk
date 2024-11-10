@@ -53,7 +53,7 @@ pub mod stable_swap {
 
     /* Configuration */
 
-    pub fn change_amp_factor(ctx: Context<OwnerOnly>, new_amp_factor: u16, ramp_duration: u32) -> Result<()> {
+    pub fn change_amp_factor(ctx: Context<AdminOnly>, new_amp_factor: u16, ramp_duration: u32) -> Result<()> {
         Ok(())
     }
 
