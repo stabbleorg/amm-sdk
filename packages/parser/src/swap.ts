@@ -1,10 +1,13 @@
 import bs58 from "bs58";
 import { BorshInstructionCoder, Instruction } from "@coral-xyz/anchor";
 import {
+  DecodedTransferCheckedInstruction,
   DecodedTransferInstruction,
   TOKEN_PROGRAM_ID,
+  TOKEN_2022_PROGRAM_ID,
   decodeBurnInstruction,
   decodeMintToInstruction,
+  decodeTransferCheckedInstruction,
   decodeTransferInstruction,
   getMultipleAccounts,
 } from "@solana/spl-token";
@@ -93,7 +96,8 @@ export class SwapParser {
       referrer = Buffer.from(memo.data).toString("utf-8");
     }
 
-    for (const [i, compiledInstruction] of data.transaction.message.compiledInstructions.entries()) {
+    let i = 0;
+    for (const compiledInstruction of data.transaction.message.compiledInstructions) {
       const keyIndexes = compiledInstruction.accountKeyIndexes;
       const instructions = data.meta?.innerInstructions?.find(({ index }) => index === i)?.instructions;
 
@@ -133,6 +137,13 @@ export class SwapParser {
                 referrer,
               });
               break;
+            case "swapV2":
+              result.push({
+                meta: instructionMeta,
+                ...(await this.parseSwapV2Instruction({ accountKeys, keyIndexes, instructions })),
+                referrer,
+              });
+              break;
             default:
               result.push({
                 meta: instructionMeta,
@@ -143,46 +154,69 @@ export class SwapParser {
       } else if (instructions) {
         const cpiSwapInstructions: CompiledInstruction[][] = [];
 
-        let i = 0;
-        while (i < instructions.length) {
-          const instruction = instructions[i];
+        let j = 0;
+        while (j < instructions.length) {
+          const instruction = instructions[j];
           if (accountKeys.get(instruction.programIdIndex)?.equals(this.program.programId)) {
-            const transferA = instructions[i + 1];
-            if (transferA && accountKeys.get(transferA.programIdIndex)?.equals(TOKEN_PROGRAM_ID)) {
-              const withdrawVault = instructions[i + 2];
+            const transferA = instructions[j + 1];
+            const transferAId = accountKeys.get(transferA.programIdIndex);
+            if (
+              transferA &&
+              transferAId &&
+              (transferAId.equals(TOKEN_PROGRAM_ID) || transferAId.equals(TOKEN_2022_PROGRAM_ID))
+            ) {
+              const withdrawVault = instructions[j + 2];
               if (withdrawVault && accountKeys.get(withdrawVault.programIdIndex)?.equals(AMM_VAULT_ID)) {
-                const transferB = instructions[i + 3];
-                if (transferB && accountKeys.get(transferB.programIdIndex)?.equals(TOKEN_PROGRAM_ID)) {
-                  const transferC = instructions[i + 4];
-                  if (transferC && accountKeys.get(transferC.programIdIndex)?.equals(TOKEN_PROGRAM_ID)) {
+                const transferB = instructions[j + 3];
+                const transferBId = accountKeys.get(transferB.programIdIndex);
+                if (
+                  transferB &&
+                  transferBId &&
+                  (transferBId.equals(TOKEN_PROGRAM_ID) || transferBId.equals(TOKEN_2022_PROGRAM_ID))
+                ) {
+                  const transferC = instructions[j + 4];
+                  const transferCId = accountKeys.get(transferC.programIdIndex);
+                  if (
+                    transferC &&
+                    transferCId &&
+                    (transferCId.equals(TOKEN_PROGRAM_ID) || transferCId.equals(TOKEN_2022_PROGRAM_ID))
+                  ) {
                     cpiSwapInstructions.push([instruction, transferA, withdrawVault, transferB, transferC]);
-                    i += 4;
+                    j += 4;
                   } else {
                     cpiSwapInstructions.push([instruction, transferA, withdrawVault, transferB]);
-                    i += 3;
+                    j += 3;
                   }
                 }
               }
             }
           }
-          i++;
+          j++;
         }
 
         for (const instructions of cpiSwapInstructions) {
           const anchorMeta = this.coder.decode(Buffer.from(bs58.decode(instructions[0].data)));
-          if (anchorMeta && anchorMeta.name === "swap") {
+          if (anchorMeta && anchorMeta.name.startsWith("swap")) {
             result.push({
               meta: anchorMeta,
-              ...(await this.parseSwapInstruction({
-                accountKeys,
-                keyIndexes: instructions[0].accounts,
-                instructions: instructions.slice(1),
-              })),
+              ...(anchorMeta.name === "swapV2"
+                ? await this.parseSwapV2Instruction({
+                    accountKeys,
+                    keyIndexes: instructions[0].accounts,
+                    instructions: instructions.slice(1),
+                  })
+                : await this.parseSwapInstruction({
+                    accountKeys,
+                    keyIndexes: instructions[0].accounts,
+                    instructions: instructions.slice(1),
+                  })),
               referrer,
             });
           }
         }
       }
+
+      i++;
     }
 
     return result;
@@ -204,7 +238,7 @@ export class SwapParser {
     const transfers = instructions
       .slice(0, instructions.length - 1)
       .map((transferInstruction) =>
-        decodeTransferInstruction({
+        decodeTransferCheckedInstruction({
           programId: accountKeys.get(transferInstruction.programIdIndex)!,
           keys: transferInstruction.accounts.map((index) => ({
             pubkey: accountKeys.get(index)!,
@@ -259,7 +293,7 @@ export class SwapParser {
       .slice(0, instructions.length - 1)
       .filter((_, index) => index % 2 === 1)
       .map((transferInstruction) =>
-        decodeTransferInstruction({
+        decodeTransferCheckedInstruction({
           programId: accountKeys.get(transferInstruction.programIdIndex)!,
           keys: transferInstruction.accounts.map((index) => ({
             pubkey: accountKeys.get(index)!,
@@ -360,6 +394,71 @@ export class SwapParser {
 
     return {
       poolAddress: accountKeys.get(keyIndexes[6])!.toBase58(),
+      userAddress: accountKeys.get(keyIndexes[0])!.toBase58(),
+      amounts: [
+        { mintAddress: tokenAccounts[0].mint.toBase58(), amount: transferA.data.amount },
+        { mintAddress: tokenAccounts[1].mint.toBase58(), amount: -transferB.data.amount },
+      ],
+      beneficiaryAddress,
+      beneficiaryAmount,
+    };
+  }
+
+  async parseSwapV2Instruction({
+    accountKeys,
+    keyIndexes,
+    instructions = [],
+  }: ParseInstructionArgs): Promise<ChangedBalance> {
+    const hasFee = instructions.length === 4;
+    const transferAInstruction = instructions[0];
+    const transferBInstruction = hasFee ? instructions[3] : instructions[2];
+    const transferCInstruction = hasFee ? instructions[2] : null;
+
+    const transferA = decodeTransferCheckedInstruction({
+      programId: accountKeys.get(transferAInstruction.programIdIndex)!,
+      keys: transferAInstruction.accounts.map((index) => ({
+        pubkey: accountKeys.get(index)!,
+        isSigner: false,
+        isWritable: true,
+      })),
+      data: Buffer.from(bs58.decode(transferAInstruction.data)),
+    });
+    const accountAddresses: PublicKey[] = [transferA.keys.destination.pubkey];
+    const transferB = decodeTransferCheckedInstruction({
+      programId: accountKeys.get(transferBInstruction.programIdIndex)!,
+      keys: transferBInstruction.accounts.map((index) => ({
+        pubkey: accountKeys.get(index)!,
+        isSigner: false,
+        isWritable: true,
+      })),
+      data: Buffer.from(bs58.decode(transferBInstruction.data)),
+    });
+    let transferC: DecodedTransferCheckedInstruction | null = null;
+    if (transferCInstruction) {
+      transferC = decodeTransferCheckedInstruction({
+        programId: accountKeys.get(transferCInstruction.programIdIndex)!,
+        keys: transferCInstruction.accounts.map((index) => ({
+          pubkey: accountKeys.get(index)!,
+          isSigner: false,
+          isWritable: true,
+        })),
+        data: Buffer.from(bs58.decode(transferCInstruction.data)),
+      });
+      accountAddresses.push(transferC.keys.destination.pubkey);
+    } else {
+      accountAddresses.push(transferB.keys.source.pubkey);
+    }
+    const tokenAccounts = await getMultipleAccounts(this.connection, accountAddresses);
+
+    let beneficiaryAddress;
+    let beneficiaryAmount;
+    if (transferC) {
+      beneficiaryAddress = tokenAccounts[1].owner.toBase58();
+      beneficiaryAmount = -transferC.data.amount;
+    }
+
+    return {
+      poolAddress: accountKeys.get(keyIndexes[8])!.toBase58(),
       userAddress: accountKeys.get(keyIndexes[0])!.toBase58(),
       amounts: [
         { mintAddress: tokenAccounts[0].mint.toBase58(), amount: transferA.data.amount },

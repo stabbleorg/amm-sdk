@@ -1,6 +1,6 @@
 import BN from "bn.js";
 import { PublicKey } from "@solana/web3.js";
-import { getAssociatedTokenAddressSync } from "@solana/spl-token";
+import { getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { SafeAmount } from "@stabbleorg/anchor-contrib";
 import { AMM_VAULT_ID } from "../programs";
 
@@ -53,12 +53,12 @@ export class Vault {
     this.data = { ...this.data, ...updatedData };
   }
 
-  getAuthorityTokenAddress(mintAddress: PublicKey): PublicKey {
-    return getAssociatedTokenAddressSync(mintAddress, this.authorityAddress, true);
+  getAuthorityTokenAddress(mintAddress: PublicKey, programId: PublicKey = TOKEN_PROGRAM_ID): PublicKey {
+    return getAssociatedTokenAddressSync(mintAddress, this.authorityAddress, true, programId);
   }
 
-  getBeneficiaryTokenAddress(mintAddress: PublicKey): PublicKey {
-    return getAssociatedTokenAddressSync(mintAddress, this.beneficiaryAddress, true);
+  getBeneficiaryTokenAddress(mintAddress: PublicKey, programId: PublicKey = TOKEN_PROGRAM_ID): PublicKey {
+    return getAssociatedTokenAddressSync(mintAddress, this.beneficiaryAddress, true, programId);
   }
 
   static getAuthorityAddress(vaultAddress: PublicKey): PublicKey {

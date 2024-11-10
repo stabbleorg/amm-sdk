@@ -21,6 +21,7 @@ pub const BALANCE_THRESHOLD: u64 = 1;
 pub const MIN_TOKENS: usize = 2;
 pub const MAX_TOKENS: usize = 5;
 
+#[inline(always)]
 pub fn amp_precision_u192() -> U192 {
     uint192!(AMP_PRECISION)
 }
@@ -44,25 +45,34 @@ pub fn calc_invariant(amplification: u64, balances: &Vec<u64>) -> Option<u64> {
         return Some(0);
     }
 
-    let num_tokens = balances.len() as u64;
-    let amp_times_total = amplification.checked_mul(num_tokens)?; // Ann in the Curve version
+    let num_tokens = balances.len();
+    let num_tokens_u64 = num_tokens as u64;
+    let num_tokens_u192 = uint192!(num_tokens_u64);
+
+    let amp_times_total = amplification.checked_mul(num_tokens_u64)?; // Ann in the Curve version
 
     let sum = uint192!(sum);
     let mut invariant = sum; // D in the Curve version
 
+    // Precompute balances[i] * num_tokens
+    let mut balances_times: Vec<U192> = Vec::with_capacity(balances.len());
+    for &balance in balances.iter() {
+        balances_times.push(uint192!(balance.checked_mul(num_tokens_u64)?));
+    }
+
     for _ in 0..255 {
         let mut p = invariant;
 
-        for i in 0..balances.len() {
+        for &balance_times in balances_times.iter() {
             // (p * invariant) / (balances[i] * num_tokens)
-            p = p.checked_mul_div_down(invariant, uint192!(balances[i].checked_mul(num_tokens)?))?;
+            p = p.checked_mul_div_down(invariant, balance_times)?;
         }
 
         let prev_invariant = invariant; // Dprev in the Curve version
 
         invariant = (uint192!(amp_times_total)
             .checked_mul_div_down(sum, amp_precision_u192())?
-            .checked_add(p.checked_mul(uint192!(balances.len()))?))?
+            .checked_add(p.checked_mul(num_tokens_u192)?))?
         .checked_mul_div_down(
             invariant,
             uint192!(amp_times_total.checked_sub(AMP_PRECISION)?)

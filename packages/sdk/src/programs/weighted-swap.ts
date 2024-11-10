@@ -7,6 +7,7 @@ import {
   MintLayout,
   NATIVE_MINT,
   TOKEN_PROGRAM_ID,
+  TOKEN_2022_PROGRAM_ID,
   createInitializeMint2Instruction,
   createSetAuthorityInstruction,
   unpackMint,
@@ -100,7 +101,7 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
     const size = this.program.account.pool.size + (WeightedPool.POOL_TOKEN_SIZE * mintAddresses.length + 4);
     const poolAuthorityAddress = WeightedPool.getAuthorityAddress(keypair.publicKey);
     const mintAccounts = await this.provider.connection.getMultipleAccountsInfo(mintAddresses);
-    const mints = mintAccounts.map((account, index) => unpackMint(mintAddresses[index], account!));
+    const mints = mintAccounts.map((account, index) => unpackMint(mintAddresses[index], account!, account!.owner));
 
     const instructions: TransactionInstruction[] = [
       SystemProgram.createAccount({
@@ -205,7 +206,10 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
       await this.getOrCreateAssociatedTokenAddressInstruction(pool.mintAddress);
     if (createUserPoolTokenInstruction) instructions.push(createUserPoolTokenInstruction);
 
-    for (const [index, mintAddress] of mintAddresses.entries()) {
+    let index = 0;
+    for (const mintAddress of mintAddresses) {
+      let vaultTokenAddress = pool.vault.getAuthorityTokenAddress(mintAddress);
+
       if (mintAddress.equals(NATIVE_MINT)) {
         const keypair = Keypair.generate();
         signers.push(keypair);
@@ -215,12 +219,18 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
         );
         userRemainingAccounts.push({ isSigner: false, isWritable: true, pubkey: keypair.publicKey });
       } else {
-        const userTokenAddress = this.getAssociatedTokenAddress(mintAddress);
+        const account = await this.provider.connection.getAccountInfo(mintAddress);
+        const tokenProgramId = account!.owner;
+
+        const userTokenAddress = this.getAssociatedTokenAddress(mintAddress, tokenProgramId);
         userRemainingAccounts.push({ isSigner: false, isWritable: true, pubkey: userTokenAddress });
+
+        vaultTokenAddress = pool.vault.getAuthorityTokenAddress(mintAddress, tokenProgramId);
       }
 
-      const vaultTokenAddress = pool.vault.getAuthorityTokenAddress(mintAddress);
       vaultRemainingAccounts.push({ isSigner: false, isWritable: true, pubkey: vaultTokenAddress });
+
+      index++;
     }
 
     instructions.push(
@@ -243,8 +253,13 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
           vault: pool.vault.address,
           vaultAuthority: pool.vault.authorityAddress,
           tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram2022: TOKEN_2022_PROGRAM_ID,
         })
-        .remainingAccounts([...userRemainingAccounts, ...vaultRemainingAccounts])
+        .remainingAccounts([
+          ...userRemainingAccounts,
+          ...vaultRemainingAccounts,
+          ...mintAddresses.map((pubkey) => ({ isSigner: false, isWritable: true, pubkey })),
+        ])
         .instruction(),
     );
 
@@ -274,19 +289,30 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
     const userPoolTokenAddress = this.getAssociatedTokenAddress(pool.mintAddress);
 
     for (const mintAddress of mintAddresses) {
+      let vaultTokenAddress = pool.vault.getAuthorityTokenAddress(mintAddress);
+
       if (mintAddress.equals(NATIVE_MINT)) {
         const keypair = Keypair.generate();
         signers.push(keypair);
         instructions.push(...this.createTokenAccountInstructions(keypair.publicKey, mintAddress));
         userRemainingAccounts.push({ isSigner: false, isWritable: true, pubkey: keypair.publicKey });
       } else {
+        const account = await this.provider.connection.getAccountInfo(mintAddress);
+        const tokenProgramId = account!.owner;
+
         const { address: userTokenAddress, instruction: createUserTokenInstruction } =
-          await this.getOrCreateAssociatedTokenAddressInstruction(mintAddress);
+          await this.getOrCreateAssociatedTokenAddressInstruction(
+            mintAddress,
+            this.walletAddress,
+            false,
+            tokenProgramId,
+          );
         if (createUserTokenInstruction) instructions.push(createUserTokenInstruction);
         userRemainingAccounts.push({ isSigner: false, isWritable: true, pubkey: userTokenAddress });
+
+        vaultTokenAddress = pool.vault.getAuthorityTokenAddress(mintAddress, tokenProgramId);
       }
 
-      const vaultTokenAddress = pool.vault.getAuthorityTokenAddress(mintAddress);
       vaultRemainingAccounts.push({ isSigner: false, isWritable: true, pubkey: vaultTokenAddress });
     }
 
@@ -313,8 +339,13 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
           vaultAuthority: pool.vault.authorityAddress,
           vaultProgram: AMM_VAULT_ID,
           tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram2022: TOKEN_2022_PROGRAM_ID,
         })
-        .remainingAccounts([...userRemainingAccounts, ...vaultRemainingAccounts])
+        .remainingAccounts([
+          ...userRemainingAccounts,
+          ...vaultRemainingAccounts,
+          ...mintAddresses.map((pubkey) => ({ isSigner: false, isWritable: false, pubkey })),
+        ])
         .instruction(),
     );
 
@@ -338,8 +369,10 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
 
     if (referrer) instructions.push(createMemoInstruction(referrer));
 
-    let tokenInAddress;
+    let tokenInAddress, tokenInProgramId;
     if (mintInAddress.equals(NATIVE_MINT)) {
+      tokenInProgramId = TOKEN_PROGRAM_ID;
+
       const keypair = Keypair.generate();
       instructions.push(
         ...this.createTokenAccountInstructions(keypair.publicKey),
@@ -349,8 +382,10 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
       tokenInAddress = keypair.publicKey;
     }
 
-    let tokenOutAddress;
+    let tokenOutAddress, tokenOutProgramId;
     if (mintOutAddress.equals(NATIVE_MINT)) {
+      tokenOutProgramId = TOKEN_PROGRAM_ID;
+
       const keypair = Keypair.generate();
       signers.push(keypair);
       instructions.push(...this.createTokenAccountInstructions(keypair.publicKey, mintOutAddress));
@@ -367,6 +402,8 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
         minimumAmountOut,
         tokenInAddress,
         tokenOutAddress,
+        tokenInProgramId,
+        tokenOutProgramId,
       })),
     );
 
@@ -383,6 +420,8 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
     mintOutAddress,
     tokenInAddress,
     tokenOutAddress,
+    tokenInProgramId,
+    tokenOutProgramId,
     amountIn,
     minimumAmountOut,
   }: SwapInstructionArgs): Promise<TransactionInstruction[]> {
@@ -391,6 +430,18 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
     const tokenOut = pool.tokens.find((token) => token.mintAddress.equals(mintOutAddress));
     if (!tokenOut) throw Error("Path not found");
 
+    if (!tokenInProgramId) {
+      const mintIn = await this.provider.connection.getAccountInfo(mintInAddress);
+      if (!mintIn) throw Error("Invalid token input");
+      tokenInProgramId = mintIn.owner;
+    }
+
+    if (!tokenOutProgramId) {
+      const mintOut = await this.provider.connection.getAccountInfo(mintOutAddress);
+      if (!mintOut) throw Error("Invalid token input");
+      tokenOutProgramId = mintOut.owner;
+    }
+
     const instructions: TransactionInstruction[] = [];
 
     let userTokenInAddress: PublicKey;
@@ -398,7 +449,12 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
       userTokenInAddress = tokenInAddress;
     } else {
       const { address: userTokenAddress, instruction: createUserTokenInstruction } =
-        await this.getOrCreateAssociatedTokenAddressInstruction(mintInAddress);
+        await this.getOrCreateAssociatedTokenAddressInstruction(
+          mintInAddress,
+          this.walletAddress,
+          true,
+          tokenInProgramId,
+        );
       if (createUserTokenInstruction) {
         instructions.push(createUserTokenInstruction);
       }
@@ -410,7 +466,12 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
       userTokenOutAddress = tokenOutAddress;
     } else {
       const { address: userTokenAddress, instruction: createUserTokenInstruction } =
-        await this.getOrCreateAssociatedTokenAddressInstruction(mintOutAddress);
+        await this.getOrCreateAssociatedTokenAddressInstruction(
+          mintOutAddress,
+          this.walletAddress,
+          true,
+          tokenOutProgramId,
+        );
       if (createUserTokenInstruction) {
         instructions.push(createUserTokenInstruction);
       }
@@ -419,23 +480,26 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
 
     instructions.push(
       await this.program.methods
-        .swap(
+        .swapV2(
           amountIn ? SafeAmount.toU64Amount(amountIn, tokenIn.balance.decimals) : null,
           SafeAmount.toU64Amount(minimumAmountOut || 0, tokenOut.balance.decimals),
         )
         .accountsStrict({
           user: this.walletAddress,
+          mintIn: mintInAddress,
+          mintOut: mintOutAddress,
           userTokenIn: userTokenInAddress,
           userTokenOut: userTokenOutAddress,
-          vaultTokenIn: pool.vault.getAuthorityTokenAddress(mintInAddress),
-          vaultTokenOut: pool.vault.getAuthorityTokenAddress(mintOutAddress),
-          beneficiaryTokenOut: pool.vault.getBeneficiaryTokenAddress(mintOutAddress),
+          vaultTokenIn: pool.vault.getAuthorityTokenAddress(mintInAddress, tokenInProgramId),
+          vaultTokenOut: pool.vault.getAuthorityTokenAddress(mintOutAddress, tokenOutProgramId),
+          beneficiaryTokenOut: pool.vault.getBeneficiaryTokenAddress(mintOutAddress, tokenOutProgramId),
           pool: pool.address,
           withdrawAuthority: pool.vault.withdrawAuthorityAddress,
           vault: pool.vault.address,
           vaultAuthority: pool.vault.authorityAddress,
           vaultProgram: AMM_VAULT_ID,
           tokenProgram: TOKEN_PROGRAM_ID,
+          token2022Program: TOKEN_2022_PROGRAM_ID,
         })
         // TODO: assign xSTB token account for swap fee discount
         .instruction(),

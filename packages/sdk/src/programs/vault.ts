@@ -104,15 +104,25 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
   }>): Promise<TransactionSignature | null> {
     const instructions: TransactionInstruction[] = [];
     for (const mintAddress of mintAddresses) {
+      const account = await this.provider.connection.getAccountInfo(mintAddress);
+      if (!account) throw Error("Invalid mint address");
+      const tokenProgramId = account.owner;
+
       const { instruction: createVaultTokenInstruction } = await this.getOrCreateAssociatedTokenAddressInstruction(
         mintAddress,
         vault.authorityAddress,
         true,
+        tokenProgramId,
       );
       if (createVaultTokenInstruction) instructions.push(createVaultTokenInstruction);
 
       const { instruction: createBeneficiaryTokenInstruction } =
-        await this.getOrCreateAssociatedTokenAddressInstruction(mintAddress, vault.beneficiaryAddress, true);
+        await this.getOrCreateAssociatedTokenAddressInstruction(
+          mintAddress,
+          vault.beneficiaryAddress,
+          true,
+          tokenProgramId,
+        );
       if (createBeneficiaryTokenInstruction) instructions.push(createBeneficiaryTokenInstruction);
     }
 

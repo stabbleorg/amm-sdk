@@ -2,7 +2,7 @@
   "address": "swapNyd8XiQwJ6ianp9snpu4brUqFxadzvHebnAXjJZ",
   "metadata": {
     "name": "stable_swap",
-    "version": "1.0.0",
+    "version": "1.3.0",
     "spec": "0.1.0",
     "description": "Created with Anchor"
   },
@@ -45,12 +45,15 @@
       ],
       "accounts": [
         {
-          "name": "owner",
-          "signer": true
-        },
-        {
           "name": "pool",
           "writable": true
+        },
+        {
+          "name": "vault"
+        },
+        {
+          "name": "admin",
+          "signer": true
         }
       ],
       "args": [
@@ -136,6 +139,9 @@
         },
         {
           "name": "token_program"
+        },
+        {
+          "name": "token_program_2022"
         }
       ],
       "args": [
@@ -354,6 +360,85 @@
       ]
     },
     {
+      "name": "swap_v2",
+      "discriminator": [
+        43,
+        4,
+        237,
+        11,
+        26,
+        201,
+        30,
+        98
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "signer": true
+        },
+        {
+          "name": "mint_in"
+        },
+        {
+          "name": "mint_out"
+        },
+        {
+          "name": "user_token_in",
+          "writable": true
+        },
+        {
+          "name": "user_token_out",
+          "writable": true
+        },
+        {
+          "name": "vault_token_in",
+          "writable": true
+        },
+        {
+          "name": "vault_token_out",
+          "writable": true
+        },
+        {
+          "name": "beneficiary_token_out",
+          "writable": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "withdraw_authority"
+        },
+        {
+          "name": "vault"
+        },
+        {
+          "name": "vault_authority"
+        },
+        {
+          "name": "vault_program"
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "token_2022_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount_in",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "minimum_amount_out",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "transfer_owner",
       "discriminator": [
         245,
@@ -452,6 +537,9 @@
         },
         {
           "name": "token_program"
+        },
+        {
+          "name": "token_program_2022"
         }
       ],
       "args": [

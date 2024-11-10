@@ -51,6 +51,10 @@ pub mod stable_swap {
         Ok(())
     }
 
+    pub fn swap_v2(ctx: Context<SwapV2>, amount_in: Option<u64>, minimum_amount_out: u64) -> Result<()> {
+        Ok(())
+    }
+
     /* Configuration */
 
     pub fn change_amp_factor(ctx: Context<AdminOnly>, new_amp_factor: u16, ramp_duration: u32) -> Result<()> {
