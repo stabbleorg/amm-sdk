@@ -160,7 +160,7 @@ export class SwapParser {
           const instruction = instructions[j];
           if (accountKeys.get(instruction.programIdIndex)?.equals(this.program.programId)) {
             const transferA = instructions[j + 1];
-            const transferAId = accountKeys.get(transferA.programIdIndex);
+            const transferAId = accountKeys.get(transferA?.programIdIndex);
             if (
               transferA &&
               transferAId &&
