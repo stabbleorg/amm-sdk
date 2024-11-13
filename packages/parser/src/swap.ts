@@ -277,7 +277,7 @@ export class SwapParser {
       );
       const tokenAccounts = await getMultipleAccounts(
         this.connection,
-        transfers.map((transfer) => new PublicKey(transfer.keys.source)),
+        transfers.map((transfer) => transfer.keys.source.pubkey),
       );
       depositAmounts.push(
         ...transfers.map((transfer, index) => ({
@@ -357,7 +357,7 @@ export class SwapParser {
       );
       const tokenAccounts = await getMultipleAccounts(
         this.connection,
-        transfers.map((transfer) => new PublicKey(transfer.keys.source)),
+        transfers.map((transfer) => transfer.keys.source.pubkey),
       );
       withdrawAmounts.push(
         ...transfers.map((transfer, index) => ({
