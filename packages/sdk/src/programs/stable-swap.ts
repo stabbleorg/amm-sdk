@@ -574,6 +574,22 @@ export class StableSwapContext<T extends Provider = Provider> extends WalletCont
 
     return this.sendSmartTransaction([instruction], [], altAccounts, priorityLevel);
   }
+
+  async acceptOwner({
+    pool,
+    priorityLevel,
+    altAccounts,
+  }: TransactionArgs<{ pool: StablePool }>): Promise<TransactionSignature> {
+    const instruction = await this.program.methods
+      .acceptOwner()
+      .accountsStrict({
+        pendingOwner: this.walletAddress,
+        pool: pool.address,
+      })
+      .instruction();
+
+    return this.sendSmartTransaction([instruction], [], altAccounts, priorityLevel);
+  }
 }
 
 export class StableSwapListener {

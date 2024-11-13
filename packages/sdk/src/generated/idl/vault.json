@@ -370,6 +370,11 @@
       "code": 6000,
       "name": "SlippageExceeded",
       "msg": "Slippage exceeded"
+    },
+    {
+      "code": 6001,
+      "name": "NotSupportedMint",
+      "msg": "Not supported mint"
     }
   ],
   "types": [

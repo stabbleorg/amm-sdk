@@ -99,7 +99,7 @@ pub struct SwapV2<'info> {
     pub pool: AccountInfo<'info>,
     pub withdraw_authority: AccountInfo<'info>,
     pub vault: AccountInfo<'info>,
-    pub vault_authority: UncheckedAccount<'info>,
+    pub vault_authority: AccountInfo<'info>,
     pub vault_program: AccountInfo<'info>,
     pub token_program: AccountInfo<'info>,
     pub token_2022_program: AccountInfo<'info>,
