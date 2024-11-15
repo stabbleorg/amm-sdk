@@ -19,6 +19,7 @@ pub struct WeightedSwap {
     key: Pubkey,
     state: Pool,
     beneficiary: Option<Pubkey>,
+    is_active: bool,
 }
 
 impl Clone for WeightedSwap {
@@ -27,6 +28,7 @@ impl Clone for WeightedSwap {
             key: self.key,
             state: self.state.clone(),
             beneficiary: self.beneficiary.clone(),
+            is_active: self.is_active,
         }
     }
 }
@@ -39,6 +41,7 @@ impl Amm for WeightedSwap {
             key: keyed_account.key,
             state,
             beneficiary: None,
+            is_active: true,
         })
     }
 
@@ -66,6 +69,7 @@ impl Amm for WeightedSwap {
         let mut vault_data = try_get_account_data(account_map, &self.state.vault)?;
         let vault = Vault::try_deserialize(&mut vault_data)?;
         self.beneficiary = Some(vault.beneficiary);
+        self.is_active = vault.is_active;
 
         let mut pool_data = try_get_account_data(account_map, &self.key)?;
         self.state = Pool::try_deserialize(&mut pool_data)?;
@@ -141,6 +145,6 @@ impl Amm for WeightedSwap {
     }
 
     fn is_active(&self) -> bool {
-        self.state.is_active
+        self.state.is_active && self.is_active
     }
 }

@@ -169,14 +169,14 @@ export class SwapParser {
               const withdrawVault = instructions[j + 2];
               if (withdrawVault && accountKeys.get(withdrawVault.programIdIndex)?.equals(AMM_VAULT_ID)) {
                 const transferB = instructions[j + 3];
-                const transferBId = accountKeys.get(transferB.programIdIndex);
+                const transferBId = accountKeys.get(transferB?.programIdIndex);
                 if (
                   transferB &&
                   transferBId &&
                   (transferBId.equals(TOKEN_PROGRAM_ID) || transferBId.equals(TOKEN_2022_PROGRAM_ID))
                 ) {
                   const transferC = instructions[j + 4];
-                  const transferCId = accountKeys.get(transferC.programIdIndex);
+                  const transferCId = accountKeys.get(transferC?.programIdIndex);
                   if (
                     transferC &&
                     transferCId &&
