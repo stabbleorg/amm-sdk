@@ -107,7 +107,7 @@ export class Swap {
         instructions.push(
           ...weightedSwap.createTokenAccountInstructions(tokenOutAddress, routes[0].mintOutAddress, tokenOutProgramId),
         );
-        closeInstructions.push(weightedSwap.closeTokenAccountInstruction(tokenOutAddress));
+        closeInstructions.push(weightedSwap.closeTokenAccountInstruction(tokenOutAddress, tokenOutProgramId));
       }
 
       const args0: SwapInstructionArgs = {
@@ -206,7 +206,7 @@ export class Swap {
         instructions.push(
           ...weightedSwap.createTokenAccountInstructions(tokenOutAddress, routes[0].mintOutAddress, tokenOutProgramId),
         );
-        closeInstructions.push(weightedSwap.closeTokenAccountInstruction(tokenOutAddress));
+        closeInstructions.push(weightedSwap.closeTokenAccountInstruction(tokenOutAddress, tokenOutProgramId));
       }
 
       const args0: SwapInstructionArgs = {
@@ -231,7 +231,7 @@ export class Swap {
       tokenInAddress = tokenOutAddress;
       tokenInProgramId = tokenOutProgramId;
       {
-        const account = await weightedSwap.provider.connection.getAccountInfo(routes[0].mintOutAddress);
+        const account = await weightedSwap.provider.connection.getAccountInfo(routes[1].mintOutAddress);
         tokenOutProgramId = account!.owner;
 
         const keypair = Keypair.generate();
@@ -240,7 +240,7 @@ export class Swap {
         instructions.push(
           ...weightedSwap.createTokenAccountInstructions(tokenOutAddress, routes[1].mintOutAddress, tokenOutProgramId),
         );
-        closeInstructions.push(weightedSwap.closeTokenAccountInstruction(tokenOutAddress));
+        closeInstructions.push(weightedSwap.closeTokenAccountInstruction(tokenOutAddress, tokenOutProgramId));
       }
 
       const args1: SwapInstructionArgs = {
