@@ -125,12 +125,12 @@ export class StablePool implements Pool<StablePoolData> {
     const tokenIn = this.data.tokens[tokenInIndex];
     const tokenOut = this.data.tokens[tokenOutIndex];
 
-    const scaingFactorIn = tokenIn.scalingFactor.toNumber();
-    const scaingFactorOut = tokenOut.scalingFactor.toNumber();
+    const scalingFactorIn = tokenIn.scalingFactor.toNumber();
+    const scalingFactorOut = tokenOut.scalingFactor.toNumber();
 
     const scalingRatio =
-      (tokenOut.scalingUp ? 1 / scaingFactorOut : scaingFactorOut) /
-      (tokenIn.scalingUp ? 1 / scaingFactorIn : scaingFactorIn);
+      (tokenOut.scalingUp ? 1 / scalingFactorOut : scalingFactorOut) /
+      (tokenIn.scalingUp ? 1 / scalingFactorIn : scalingFactorIn);
 
     const price = balanceRatio * scalingRatio;
 
@@ -178,6 +178,10 @@ export class StablePool implements Pool<StablePoolData> {
   getPostAmountOut(tokenInAddress: PublicKey, tokenOutAddress: PublicKey, amountIn: number, amountOut: number): number {
     const tokenInIndex = this.tokens.findIndex((token) => token.mintAddress.equals(tokenInAddress));
     const tokenOutIndex = this.tokens.findIndex((token) => token.mintAddress.equals(tokenOutAddress));
+
+    if (tokenInIndex === -1 || tokenOutIndex === -1) {
+      return 0;
+    }
 
     const tokenIn = this.data.tokens[tokenInIndex];
     const u64AmountIn = SafeAmount.toU64Amount(amountIn, tokenIn.decimals);
