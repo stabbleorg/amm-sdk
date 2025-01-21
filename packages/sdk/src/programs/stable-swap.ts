@@ -256,7 +256,7 @@ export class StableSwapContext<T extends Provider = Provider> extends WalletCont
         .remainingAccounts([
           ...userRemainingAccounts,
           ...vaultRemainingAccounts,
-          ...mintAddresses.map((pubkey) => ({ isSigner: false, isWritable: true, pubkey })),
+          ...mintAddresses.map((pubkey) => ({ isSigner: false, isWritable: false, pubkey })),
         ])
         .instruction(),
     );

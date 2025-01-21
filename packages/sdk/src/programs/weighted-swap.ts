@@ -258,7 +258,7 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
         .remainingAccounts([
           ...userRemainingAccounts,
           ...vaultRemainingAccounts,
-          ...mintAddresses.map((pubkey) => ({ isSigner: false, isWritable: true, pubkey })),
+          ...mintAddresses.map((pubkey) => ({ isSigner: false, isWritable: false, pubkey })),
         ])
         .instruction(),
     );
