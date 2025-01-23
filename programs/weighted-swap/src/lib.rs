@@ -12,6 +12,9 @@ pub mod pool;
 use crate::contexts::*;
 use anchor_lang::prelude::*;
 
+// re-export math for convenience
+pub use math::*;
+
 declare_id!("swapFpHZwjELNnjvThjajtiVmkz3yPQEHjLtka2fwHW");
 
 #[program]
