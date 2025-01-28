@@ -1,4 +1,7 @@
-use anchor_lang::solana_program::pubkey::Pubkey;
+use anchor_lang::{
+    error::ErrorCode::{AccountDidNotDeserialize, AccountDiscriminatorMismatch, AccountDiscriminatorNotFound},
+    solana_program::pubkey::Pubkey,
+};
 use bn::safe_math::CheckedMulDiv;
 use math::{
     fixed_math::{FixedComplement, FixedMul},
@@ -32,48 +35,81 @@ pub struct Pool {
 }
 
 impl Pool {
-    pub fn try_deserialize(data: &[u8]) -> Option<Self> {
+    pub const DISCRIMINATOR: [u8; 8] = [241, 154, 109, 4, 17, 177, 109, 188];
+
+    pub fn try_deserialize(data: &[u8]) -> anchor_lang::Result<Self> {
         let mut offset = 0;
 
         // Check discriminator
         if data.len() < 8 {
-            return None;
+            return Err(AccountDiscriminatorNotFound.into());
         }
         let discriminator = &data[offset..offset + 8];
-        let expected_discriminator = [241, 154, 109, 4, 17, 177, 109, 188];
-        if discriminator != expected_discriminator {
-            return None;
+        if discriminator != Self::DISCRIMINATOR {
+            return Err(AccountDiscriminatorMismatch.into());
         }
         offset += 40;
 
-        let vault = Pubkey::new_from_array(data[offset..offset + 32].try_into().ok()?);
+        let vault = Pubkey::new_from_array(
+            data[offset..offset + 32]
+                .try_into()
+                .map_err(|_| AccountDidNotDeserialize)?,
+        );
         offset += 65;
 
         let is_active = data[offset] != 0;
         offset += 1;
 
-        let amp_initial_factor = u16::from_le_bytes(data[offset..offset + 2].try_into().ok()?);
+        let amp_initial_factor = u16::from_le_bytes(
+            data[offset..offset + 2]
+                .try_into()
+                .map_err(|_| AccountDidNotDeserialize)?,
+        );
         offset += 2;
 
-        let amp_target_factor = u16::from_le_bytes(data[offset..offset + 2].try_into().ok()?);
+        let amp_target_factor = u16::from_le_bytes(
+            data[offset..offset + 2]
+                .try_into()
+                .map_err(|_| AccountDidNotDeserialize)?,
+        );
         offset += 2;
 
-        let ramp_start_ts = i64::from_le_bytes(data[offset..offset + 8].try_into().ok()?);
+        let ramp_start_ts = i64::from_le_bytes(
+            data[offset..offset + 8]
+                .try_into()
+                .map_err(|_| AccountDidNotDeserialize)?,
+        );
         offset += 8;
 
-        let ramp_stop_ts = i64::from_le_bytes(data[offset..offset + 8].try_into().ok()?);
+        let ramp_stop_ts = i64::from_le_bytes(
+            data[offset..offset + 8]
+                .try_into()
+                .map_err(|_| AccountDidNotDeserialize)?,
+        );
         offset += 8;
 
-        let swap_fee = u64::from_le_bytes(data[offset..offset + 8].try_into().ok()?);
+        let swap_fee = u64::from_le_bytes(
+            data[offset..offset + 8]
+                .try_into()
+                .map_err(|_| AccountDidNotDeserialize)?,
+        );
         offset += 8;
 
         // Deserialize tokens
-        let token_count = u32::from_le_bytes(data[offset..offset + 4].try_into().ok()?);
+        let token_count = u32::from_le_bytes(
+            data[offset..offset + 4]
+                .try_into()
+                .map_err(|_| AccountDidNotDeserialize)?,
+        );
         offset += 4;
 
         let mut tokens = Vec::with_capacity(token_count as usize);
         for _ in 0..token_count {
-            let mint = Pubkey::new_from_array(data[offset..offset + 32].try_into().ok()?);
+            let mint = Pubkey::new_from_array(
+                data[offset..offset + 32]
+                    .try_into()
+                    .map_err(|_| AccountDidNotDeserialize)?,
+            );
             offset += 32;
 
             let decimals = data[offset];
@@ -82,10 +118,18 @@ impl Pool {
             let scaling_up = data[offset] != 0;
             offset += 1;
 
-            let scaling_factor = u64::from_le_bytes(data[offset..offset + 8].try_into().ok()?);
+            let scaling_factor = u64::from_le_bytes(
+                data[offset..offset + 8]
+                    .try_into()
+                    .map_err(|_| AccountDidNotDeserialize)?,
+            );
             offset += 8;
 
-            let balance = u64::from_le_bytes(data[offset..offset + 8].try_into().ok()?);
+            let balance = u64::from_le_bytes(
+                data[offset..offset + 8]
+                    .try_into()
+                    .map_err(|_| AccountDidNotDeserialize)?,
+            );
             offset += 8;
 
             tokens.push(PoolToken {
@@ -97,7 +141,7 @@ impl Pool {
             });
         }
 
-        Some(Self {
+        Ok(Self {
             vault,
             is_active,
             amp_initial_factor,
