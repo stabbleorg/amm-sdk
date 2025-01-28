@@ -1,5 +1,7 @@
-use anchor_lang::solana_program::pubkey::Pubkey;
-
+use anchor_lang::{
+    error::ErrorCode::{AccountDidNotDeserialize, AccountDiscriminatorMismatch, AccountDiscriminatorNotFound},
+    solana_program::pubkey::Pubkey,
+};
 #[derive(Debug, Clone)]
 pub struct Vault {
     // pub admin: Pubkey,
@@ -13,25 +15,30 @@ pub struct Vault {
 }
 
 impl Vault {
-    pub fn try_deserialize(data: &[u8]) -> Option<Self> {
+    pub const DISCRIMINATOR: [u8; 8] = [211, 8, 232, 43, 2, 152, 117, 119];
+
+    pub fn try_deserialize(data: &[u8]) -> anchor_lang::Result<Self> {
         let mut offset = 0;
 
         // Check discriminator
         if data.len() < 8 {
-            return None;
+            return Err(AccountDiscriminatorNotFound.into());
         }
         let discriminator = &data[offset..offset + 8];
-        let expected_discriminator = [211, 8, 232, 43, 2, 152, 117, 119];
-        if discriminator != expected_discriminator {
-            return None;
+        if discriminator != Self::DISCRIMINATOR {
+            return Err(AccountDiscriminatorMismatch.into());
         }
         offset += 74;
 
         let is_active = data[offset] != 0;
         offset += 1;
 
-        let beneficiary = Pubkey::new_from_array(data[offset..offset + 32].try_into().ok()?);
+        let beneficiary = Pubkey::new_from_array(
+            data[offset..offset + 32]
+                .try_into()
+                .map_err(|_| AccountDidNotDeserialize)?,
+        );
 
-        Some(Self { is_active, beneficiary })
+        Ok(Self { is_active, beneficiary })
     }
 }
