@@ -1,11 +1,10 @@
-use anchor_lang::prelude::borsh;
-use anchor_lang::{account, solana_program::pubkey::Pubkey, AnchorDeserialize, AnchorSerialize};
+use anchor_lang::solana_program::pubkey::Pubkey;
 use math::{
     fixed_math::{FixedComplement, FixedMul},
     swap_fee_math, weighted_math,
 };
 
-#[derive(AnchorSerialize, AnchorDeserialize, Eq, PartialEq, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct PoolToken {
     pub mint: Pubkey,        // immutable
     pub decimals: u8,        // immutable
@@ -15,20 +14,90 @@ pub struct PoolToken {
     pub weight: u64, // immutable
 }
 
-#[account]
+#[derive(Debug, Clone)]
 pub struct Pool {
-    pub owner: Pubkey,
-    pub vault: Pubkey,      // immutable
-    pub mint: Pubkey,       // immutable
-    pub authority_bump: u8, // immutable
+    // pub owner: Pubkey,
+    pub vault: Pubkey,
+    // pub mint: Pubkey,
+    // pub authority_bump: u8,
     pub is_active: bool,
     pub invariant: u64,
     pub swap_fee: u64,
     pub tokens: Vec<PoolToken>,
-    pub pending_owner: Option<Pubkey>,
+    // pub pending_owner: Option<Pubkey>,
+    // pub max_supply: u64,
 }
 
 impl Pool {
+    pub fn try_deserialize(data: &[u8]) -> Option<Self> {
+        let mut offset = 0;
+
+        // Check discriminator
+        if data.len() < 8 {
+            return None;
+        }
+        let discriminator = &data[offset..offset + 8];
+        let expected_discriminator = [241, 154, 109, 4, 17, 177, 109, 188];
+        if discriminator != expected_discriminator {
+            return None;
+        }
+        offset += 40;
+
+        let vault = Pubkey::new_from_array(data[offset..offset + 32].try_into().ok()?);
+        offset += 65;
+
+        let is_active = data[offset] != 0;
+        offset += 1;
+
+        let invariant = u64::from_le_bytes(data[offset..offset + 8].try_into().ok()?);
+        offset += 8;
+
+        let swap_fee = u64::from_le_bytes(data[offset..offset + 8].try_into().ok()?);
+        offset += 8;
+
+        // Deserialize tokens
+        let token_count = u32::from_le_bytes(data[offset..offset + 4].try_into().ok()?);
+        offset += 4;
+
+        let mut tokens = Vec::with_capacity(token_count as usize);
+        for _ in 0..token_count {
+            let mint = Pubkey::new_from_array(data[offset..offset + 32].try_into().ok()?);
+            offset += 32;
+
+            let decimals = data[offset];
+            offset += 1;
+
+            let scaling_up = data[offset] != 0;
+            offset += 1;
+
+            let scaling_factor = u64::from_le_bytes(data[offset..offset + 8].try_into().ok()?);
+            offset += 8;
+
+            let balance = u64::from_le_bytes(data[offset..offset + 8].try_into().ok()?);
+            offset += 8;
+
+            let weight = u64::from_le_bytes(data[offset..offset + 8].try_into().ok()?);
+            offset += 8;
+
+            tokens.push(PoolToken {
+                mint,
+                decimals,
+                scaling_up,
+                scaling_factor,
+                balance,
+                weight,
+            });
+        }
+
+        Some(Self {
+            vault,
+            is_active,
+            invariant,
+            swap_fee,
+            tokens,
+        })
+    }
+
     pub fn get_normalized_weights(&self) -> Vec<u64> {
         self.tokens.iter().map(|token| token.weight).collect()
     }

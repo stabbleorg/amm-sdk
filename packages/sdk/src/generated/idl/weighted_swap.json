@@ -2,7 +2,7 @@
   "address": "swapFpHZwjELNnjvThjajtiVmkz3yPQEHjLtka2fwHW",
   "metadata": {
     "name": "weighted_swap",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "spec": "0.1.0",
     "description": "Created with Anchor"
   },
@@ -30,6 +30,35 @@
         }
       ],
       "args": []
+    },
+    {
+      "name": "change_max_supply",
+      "discriminator": [
+        93,
+        176,
+        0,
+        205,
+        69,
+        63,
+        87,
+        80
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_max_supply",
+          "type": "u64"
+        }
+      ]
     },
     {
       "name": "change_swap_fee",
@@ -627,6 +656,10 @@
             "type": {
               "option": "pubkey"
             }
+          },
+          {
+            "name": "max_supply",
+            "type": "u64"
           }
         ]
       }
@@ -708,6 +741,10 @@
           },
           {
             "name": "swap_fee",
+            "type": "u64"
+          },
+          {
+            "name": "max_supply",
             "type": "u64"
           }
         ]

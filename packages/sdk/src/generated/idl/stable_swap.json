@@ -2,7 +2,7 @@
   "address": "swapNyd8XiQwJ6ianp9snpu4brUqFxadzvHebnAXjJZ",
   "metadata": {
     "name": "stable_swap",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "spec": "0.1.0",
     "description": "Created with Anchor"
   },
@@ -26,6 +26,42 @@
         },
         {
           "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "approve_strategy",
+      "discriminator": [
+        7,
+        141,
+        162,
+        60,
+        71,
+        115,
+        26,
+        146
+      ],
+      "accounts": [
+        {
+          "name": "admin_only",
+          "accounts": [
+            {
+              "name": "pool",
+              "writable": true
+            },
+            {
+              "name": "vault"
+            },
+            {
+              "name": "admin",
+              "signer": true
+            }
+          ]
+        },
+        {
+          "name": "strategy",
           "writable": true
         }
       ],
@@ -68,6 +104,35 @@
       ]
     },
     {
+      "name": "change_max_supply",
+      "discriminator": [
+        93,
+        176,
+        0,
+        205,
+        69,
+        63,
+        87,
+        80
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_max_supply",
+          "type": "u64"
+        }
+      ]
+    },
+    {
       "name": "change_swap_fee",
       "discriminator": [
         231,
@@ -93,6 +158,64 @@
         {
           "name": "new_swap_fee",
           "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "create_strategy",
+      "discriminator": [
+        152,
+        160,
+        107,
+        148,
+        245,
+        190,
+        127,
+        224
+      ],
+      "accounts": [
+        {
+          "name": "owner_only",
+          "accounts": [
+            {
+              "name": "owner",
+              "signer": true
+            },
+            {
+              "name": "pool",
+              "writable": true
+            }
+          ]
+        },
+        {
+          "name": "strategy",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "amp_min_factor",
+          "type": "u16"
+        },
+        {
+          "name": "amp_max_factor",
+          "type": "u16"
+        },
+        {
+          "name": "ramp_min_step",
+          "type": "u16"
+        },
+        {
+          "name": "ramp_max_step",
+          "type": "u16"
+        },
+        {
+          "name": "ramp_min_duration",
+          "type": "u32"
+        },
+        {
+          "name": "ramp_max_duration",
+          "type": "u32"
         }
       ]
     },
@@ -154,6 +277,38 @@
         {
           "name": "minimum_amount_out",
           "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "exec_strategy",
+      "discriminator": [
+        249,
+        46,
+        55,
+        57,
+        31,
+        38,
+        61,
+        27
+      ],
+      "accounts": [
+        {
+          "name": "strategy"
+        },
+        {
+          "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "ramp_step",
+          "type": "u16"
+        },
+        {
+          "name": "ramp_duration",
+          "type": "u32"
         }
       ]
     },
@@ -571,6 +726,19 @@
       ]
     },
     {
+      "name": "Strategy",
+      "discriminator": [
+        174,
+        110,
+        39,
+        119,
+        82,
+        106,
+        169,
+        102
+      ]
+    },
+    {
       "name": "Vault",
       "discriminator": [
         211,
@@ -673,6 +841,10 @@
             "type": {
               "option": "pubkey"
             }
+          },
+          {
+            "name": "max_supply",
+            "type": "u64"
           }
         ]
       }
@@ -767,6 +939,10 @@
           {
             "name": "swap_fee",
             "type": "u64"
+          },
+          {
+            "name": "max_supply",
+            "type": "u64"
           }
         ]
       }
@@ -787,6 +963,46 @@
                 "name": "PoolUpdatedData"
               }
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Strategy",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "is_active",
+            "type": "bool"
+          },
+          {
+            "name": "amp_min_factor",
+            "type": "u16"
+          },
+          {
+            "name": "amp_max_factor",
+            "type": "u16"
+          },
+          {
+            "name": "ramp_min_step",
+            "type": "u16"
+          },
+          {
+            "name": "ramp_max_step",
+            "type": "u16"
+          },
+          {
+            "name": "ramp_min_duration",
+            "type": "u32"
+          },
+          {
+            "name": "ramp_max_duration",
+            "type": "u32"
           }
         ]
       }

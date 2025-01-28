@@ -62,6 +62,10 @@ export class WeightedPool implements Pool<WeightedPoolData> {
     return SafeAmount.toNano(this.data.swapFee);
   }
 
+  get maxSupply(): number {
+    return SafeAmount.toUiAmount(this.data.maxSupply, WeightedPool.POOL_TOKEN_DECIMALS);
+  }
+
   get isActive(): boolean {
     return this.data.isActive;
   }

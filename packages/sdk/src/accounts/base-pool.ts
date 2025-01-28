@@ -18,6 +18,7 @@ export type PoolData = {
   isActive: boolean;
   swapFee: BN; // u64
   pendingOwner: PublicKey | null;
+  maxSupply: BN; // u64
 };
 
 export type PoolToken = {
@@ -41,6 +42,8 @@ export interface Pool<T> {
   get authorityAddress(): PublicKey;
 
   get swapFee(): number;
+
+  get maxSupply(): number;
 
   get isActive(): boolean;
 

@@ -337,3 +337,12 @@ export function parseWithdrawCpi(
 
   return parseWithdraw(instruction, tokenTransfers, mintDecimals);
 }
+
+export function parseCreateCpi(innerInstructions: InnerInstruction[]): CreatePool {
+  const instruction: Instruction = {
+    ...innerInstructions[0],
+    innerInstructions: innerInstructions.slice(1),
+  };
+
+  return parseCreate(instruction);
+}

@@ -2,7 +2,7 @@
   "address": "vo1tWgqZMjG61Z2T9qUaMYKqZ75CYzMuaZ2LZP1n7HV",
   "metadata": {
     "name": "vault",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "spec": "0.1.0",
     "description": "Created with Anchor"
   },
@@ -375,6 +375,11 @@
       "code": 6001,
       "name": "NotSupportedMint",
       "msg": "Not supported mint"
+    },
+    {
+      "code": 6002,
+      "name": "MaxSupplyExceeded",
+      "msg": "Max supply exceeded"
     }
   ],
   "types": [

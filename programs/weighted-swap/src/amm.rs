@@ -35,7 +35,7 @@ impl Clone for WeightedSwap {
 
 impl Amm for WeightedSwap {
     fn from_keyed_account(keyed_account: &KeyedAccount, _amm_context: &AmmContext) -> Result<Self> {
-        let state = Pool::try_deserialize(&mut &keyed_account.account.data[..]).unwrap();
+        let state = Pool::try_deserialize(&keyed_account.account.data[..]).unwrap();
 
         Ok(Self {
             key: keyed_account.key,
@@ -67,12 +67,12 @@ impl Amm for WeightedSwap {
 
     fn update(&mut self, account_map: &AccountMap) -> Result<()> {
         let mut vault_data = try_get_account_data(account_map, &self.state.vault)?;
-        let vault = Vault::try_deserialize(&mut vault_data)?;
+        let vault = Vault::try_deserialize(&vault_data).unwrap();
         self.beneficiary = Some(vault.beneficiary);
         self.is_active = vault.is_active;
 
         let mut pool_data = try_get_account_data(account_map, &self.key)?;
-        self.state = Pool::try_deserialize(&mut pool_data)?;
+        self.state = Pool::try_deserialize(&pool_data).unwrap();
 
         Ok(())
     }

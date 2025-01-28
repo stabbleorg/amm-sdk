@@ -76,6 +76,10 @@ export class StablePool implements Pool<StablePoolData> {
     return SafeAmount.toNano(this.data.swapFee);
   }
 
+  get maxSupply(): number {
+    return SafeAmount.toUiAmount(this.data.maxSupply, StablePool.POOL_TOKEN_DECIMALS);
+  }
+
   get isActive(): boolean {
     return this.data.isActive;
   }

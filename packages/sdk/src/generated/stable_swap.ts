@@ -5,679 +5,1064 @@
  * IDL can be found at `target/idl/stable_swap.json`.
  */
 export type StableSwap = {
-  address: "swapNyd8XiQwJ6ianp9snpu4brUqFxadzvHebnAXjJZ";
-  metadata: {
-    name: "stableSwap";
-    version: "1.3.0";
-    spec: "0.1.0";
-    description: "Created with Anchor";
-  };
-  instructions: [
+  "address": "swapNyd8XiQwJ6ianp9snpu4brUqFxadzvHebnAXjJZ",
+  "metadata": {
+    "name": "stableSwap",
+    "version": "1.4.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
     {
-      name: "acceptOwner";
-      discriminator: [176, 23, 41, 28, 23, 111, 8, 4];
-      accounts: [
+      "name": "acceptOwner",
+      "discriminator": [
+        176,
+        23,
+        41,
+        28,
+        23,
+        111,
+        8,
+        4
+      ],
+      "accounts": [
         {
-          name: "pendingOwner";
-          signer: true;
+          "name": "pendingOwner",
+          "signer": true
         },
         {
-          name: "pool";
-          writable: true;
-        },
-      ];
-      args: [];
+          "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": []
     },
     {
-      name: "changeAmpFactor";
-      discriminator: [56, 238, 189, 35, 200, 157, 42, 66];
-      accounts: [
+      "name": "approveStrategy",
+      "discriminator": [
+        7,
+        141,
+        162,
+        60,
+        71,
+        115,
+        26,
+        146
+      ],
+      "accounts": [
         {
-          name: "pool";
-          writable: true;
+          "name": "adminOnly",
+          "accounts": [
+            {
+              "name": "pool",
+              "writable": true
+            },
+            {
+              "name": "vault"
+            },
+            {
+              "name": "admin",
+              "signer": true
+            }
+          ]
         },
         {
-          name: "vault";
-        },
-        {
-          name: "admin";
-          signer: true;
-        },
-      ];
-      args: [
-        {
-          name: "newAmpFactor";
-          type: "u16";
-        },
-        {
-          name: "rampDuration";
-          type: "u32";
-        },
-      ];
+          "name": "strategy",
+          "writable": true
+        }
+      ],
+      "args": []
     },
     {
-      name: "changeSwapFee";
-      discriminator: [231, 15, 132, 51, 132, 165, 64, 170];
-      accounts: [
+      "name": "changeAmpFactor",
+      "discriminator": [
+        56,
+        238,
+        189,
+        35,
+        200,
+        157,
+        42,
+        66
+      ],
+      "accounts": [
         {
-          name: "owner";
-          signer: true;
+          "name": "pool",
+          "writable": true
         },
         {
-          name: "pool";
-          writable: true;
+          "name": "vault"
         },
-      ];
-      args: [
         {
-          name: "newSwapFee";
-          type: "u64";
+          "name": "admin",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "newAmpFactor",
+          "type": "u16"
         },
-      ];
+        {
+          "name": "rampDuration",
+          "type": "u32"
+        }
+      ]
     },
     {
-      name: "deposit";
-      docs: ["add liquidity"];
-      discriminator: [242, 35, 198, 137, 82, 225, 242, 182];
-      accounts: [
+      "name": "changeMaxSupply",
+      "discriminator": [
+        93,
+        176,
+        0,
+        205,
+        69,
+        63,
+        87,
+        80
+      ],
+      "accounts": [
         {
-          name: "user";
-          signer: true;
+          "name": "owner",
+          "signer": true
         },
         {
-          name: "userPoolToken";
-          writable: true;
-        },
+          "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": [
         {
-          name: "mint";
-          writable: true;
-        },
-        {
-          name: "pool";
-          writable: true;
-        },
-        {
-          name: "poolAuthority";
-        },
-        {
-          name: "vault";
-        },
-        {
-          name: "vaultAuthority";
-        },
-        {
-          name: "tokenProgram";
-        },
-        {
-          name: "tokenProgram2022";
-        },
-      ];
-      args: [
-        {
-          name: "amounts";
-          type: {
-            vec: "u64";
-          };
-        },
-        {
-          name: "minimumAmountOut";
-          type: "u64";
-        },
-      ];
+          "name": "newMaxSupply",
+          "type": "u64"
+        }
+      ]
     },
     {
-      name: "initialize";
-      docs: ["initialize a pool"];
-      discriminator: [175, 175, 109, 31, 13, 152, 155, 237];
-      accounts: [
+      "name": "changeSwapFee",
+      "discriminator": [
+        231,
+        15,
+        132,
+        51,
+        132,
+        165,
+        64,
+        170
+      ],
+      "accounts": [
         {
-          name: "owner";
-          signer: true;
+          "name": "owner",
+          "signer": true
         },
         {
-          name: "mint";
-        },
+          "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": [
         {
-          name: "pool";
-          writable: true;
-        },
-        {
-          name: "poolAuthority";
-        },
-        {
-          name: "withdrawAuthority";
-        },
-        {
-          name: "vault";
-        },
-      ];
-      args: [
-        {
-          name: "ampFactor";
-          type: "u16";
-        },
-        {
-          name: "swapFee";
-          type: "u64";
-        },
-        {
-          name: "maxCaps";
-          type: {
-            vec: "u64";
-          };
-        },
-      ];
+          "name": "newSwapFee",
+          "type": "u64"
+        }
+      ]
     },
     {
-      name: "pause";
-      discriminator: [211, 22, 221, 251, 74, 121, 193, 47];
-      accounts: [
+      "name": "createStrategy",
+      "discriminator": [
+        152,
+        160,
+        107,
+        148,
+        245,
+        190,
+        127,
+        224
+      ],
+      "accounts": [
         {
-          name: "owner";
-          signer: true;
+          "name": "ownerOnly",
+          "accounts": [
+            {
+              "name": "owner",
+              "signer": true
+            },
+            {
+              "name": "pool",
+              "writable": true
+            }
+          ]
         },
         {
-          name: "pool";
-          writable: true;
+          "name": "strategy",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "ampMinFactor",
+          "type": "u16"
         },
-      ];
-      args: [];
+        {
+          "name": "ampMaxFactor",
+          "type": "u16"
+        },
+        {
+          "name": "rampMinStep",
+          "type": "u16"
+        },
+        {
+          "name": "rampMaxStep",
+          "type": "u16"
+        },
+        {
+          "name": "rampMinDuration",
+          "type": "u32"
+        },
+        {
+          "name": "rampMaxDuration",
+          "type": "u32"
+        }
+      ]
     },
     {
-      name: "rejectOwner";
-      discriminator: [238, 206, 198, 215, 51, 178, 133, 228];
-      accounts: [
+      "name": "deposit",
+      "docs": [
+        "add liquidity"
+      ],
+      "discriminator": [
+        242,
+        35,
+        198,
+        137,
+        82,
+        225,
+        242,
+        182
+      ],
+      "accounts": [
         {
-          name: "pendingOwner";
-          signer: true;
+          "name": "user",
+          "signer": true
         },
         {
-          name: "pool";
-          writable: true;
+          "name": "userPoolToken",
+          "writable": true
         },
-      ];
-      args: [];
+        {
+          "name": "mint",
+          "writable": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "poolAuthority"
+        },
+        {
+          "name": "vault"
+        },
+        {
+          "name": "vaultAuthority"
+        },
+        {
+          "name": "tokenProgram"
+        },
+        {
+          "name": "tokenProgram2022"
+        }
+      ],
+      "args": [
+        {
+          "name": "amounts",
+          "type": {
+            "vec": "u64"
+          }
+        },
+        {
+          "name": "minimumAmountOut",
+          "type": "u64"
+        }
+      ]
     },
     {
-      name: "shutdown";
-      docs: ["shutdown the zero-liquidity pool"];
-      discriminator: [146, 204, 241, 213, 86, 21, 253, 211];
-      accounts: [
+      "name": "execStrategy",
+      "discriminator": [
+        249,
+        46,
+        55,
+        57,
+        31,
+        38,
+        61,
+        27
+      ],
+      "accounts": [
         {
-          name: "owner";
-          writable: true;
+          "name": "strategy"
         },
         {
-          name: "pool";
-          writable: true;
+          "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "rampStep",
+          "type": "u16"
         },
-      ];
-      args: [];
+        {
+          "name": "rampDuration",
+          "type": "u32"
+        }
+      ]
     },
     {
-      name: "swap";
-      docs: ["swap"];
-      discriminator: [248, 198, 158, 145, 225, 117, 135, 200];
-      accounts: [
+      "name": "initialize",
+      "docs": [
+        "initialize a pool"
+      ],
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
         {
-          name: "user";
-          signer: true;
+          "name": "owner",
+          "signer": true
         },
         {
-          name: "userTokenIn";
-          writable: true;
+          "name": "mint"
         },
         {
-          name: "userTokenOut";
-          writable: true;
+          "name": "pool",
+          "writable": true
         },
         {
-          name: "vaultTokenIn";
-          writable: true;
+          "name": "poolAuthority"
         },
         {
-          name: "vaultTokenOut";
-          writable: true;
+          "name": "withdrawAuthority"
         },
         {
-          name: "beneficiaryTokenOut";
-          writable: true;
+          "name": "vault"
+        }
+      ],
+      "args": [
+        {
+          "name": "ampFactor",
+          "type": "u16"
         },
         {
-          name: "pool";
-          writable: true;
+          "name": "swapFee",
+          "type": "u64"
         },
         {
-          name: "withdrawAuthority";
-        },
-        {
-          name: "vault";
-        },
-        {
-          name: "vaultAuthority";
-        },
-        {
-          name: "vaultProgram";
-        },
-        {
-          name: "tokenProgram";
-        },
-      ];
-      args: [
-        {
-          name: "amountIn";
-          type: {
-            option: "u64";
-          };
-        },
-        {
-          name: "minimumAmountOut";
-          type: "u64";
-        },
-      ];
+          "name": "maxCaps",
+          "type": {
+            "vec": "u64"
+          }
+        }
+      ]
     },
     {
-      name: "swapV2";
-      discriminator: [43, 4, 237, 11, 26, 201, 30, 98];
-      accounts: [
+      "name": "pause",
+      "discriminator": [
+        211,
+        22,
+        221,
+        251,
+        74,
+        121,
+        193,
+        47
+      ],
+      "accounts": [
         {
-          name: "user";
-          signer: true;
+          "name": "owner",
+          "signer": true
         },
         {
-          name: "mintIn";
-        },
-        {
-          name: "mintOut";
-        },
-        {
-          name: "userTokenIn";
-          writable: true;
-        },
-        {
-          name: "userTokenOut";
-          writable: true;
-        },
-        {
-          name: "vaultTokenIn";
-          writable: true;
-        },
-        {
-          name: "vaultTokenOut";
-          writable: true;
-        },
-        {
-          name: "beneficiaryTokenOut";
-          writable: true;
-        },
-        {
-          name: "pool";
-          writable: true;
-        },
-        {
-          name: "withdrawAuthority";
-        },
-        {
-          name: "vault";
-        },
-        {
-          name: "vaultAuthority";
-        },
-        {
-          name: "vaultProgram";
-        },
-        {
-          name: "tokenProgram";
-        },
-        {
-          name: "token2022Program";
-        },
-      ];
-      args: [
-        {
-          name: "amountIn";
-          type: {
-            option: "u64";
-          };
-        },
-        {
-          name: "minimumAmountOut";
-          type: "u64";
-        },
-      ];
+          "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": []
     },
     {
-      name: "transferOwner";
-      discriminator: [245, 25, 221, 175, 106, 229, 225, 45];
-      accounts: [
+      "name": "rejectOwner",
+      "discriminator": [
+        238,
+        206,
+        198,
+        215,
+        51,
+        178,
+        133,
+        228
+      ],
+      "accounts": [
         {
-          name: "owner";
-          signer: true;
+          "name": "pendingOwner",
+          "signer": true
         },
         {
-          name: "pool";
-          writable: true;
-        },
-      ];
-      args: [
-        {
-          name: "newOwner";
-          type: "pubkey";
-        },
-      ];
+          "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": []
     },
     {
-      name: "unpause";
-      discriminator: [169, 144, 4, 38, 10, 141, 188, 255];
-      accounts: [
+      "name": "shutdown",
+      "docs": [
+        "shutdown the zero-liquidity pool"
+      ],
+      "discriminator": [
+        146,
+        204,
+        241,
+        213,
+        86,
+        21,
+        253,
+        211
+      ],
+      "accounts": [
         {
-          name: "owner";
-          signer: true;
+          "name": "owner",
+          "writable": true
         },
         {
-          name: "pool";
-          writable: true;
-        },
-      ];
-      args: [];
+          "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": []
     },
     {
-      name: "withdraw";
-      docs: ["remove liquidity"];
-      discriminator: [183, 18, 70, 156, 148, 109, 161, 34];
-      accounts: [
+      "name": "swap",
+      "docs": [
+        "swap"
+      ],
+      "discriminator": [
+        248,
+        198,
+        158,
+        145,
+        225,
+        117,
+        135,
+        200
+      ],
+      "accounts": [
         {
-          name: "user";
-          signer: true;
+          "name": "user",
+          "signer": true
         },
         {
-          name: "userPoolToken";
-          writable: true;
+          "name": "userTokenIn",
+          "writable": true
         },
         {
-          name: "mint";
-          writable: true;
+          "name": "userTokenOut",
+          "writable": true
         },
         {
-          name: "pool";
-          writable: true;
+          "name": "vaultTokenIn",
+          "writable": true
         },
         {
-          name: "withdrawAuthority";
+          "name": "vaultTokenOut",
+          "writable": true
         },
         {
-          name: "vault";
+          "name": "beneficiaryTokenOut",
+          "writable": true
         },
         {
-          name: "vaultAuthority";
+          "name": "pool",
+          "writable": true
         },
         {
-          name: "vaultProgram";
+          "name": "withdrawAuthority"
         },
         {
-          name: "tokenProgram";
+          "name": "vault"
         },
         {
-          name: "tokenProgram2022";
-        },
-      ];
-      args: [
-        {
-          name: "amount";
-          type: "u64";
+          "name": "vaultAuthority"
         },
         {
-          name: "minimumAmountsOut";
-          type: {
-            vec: "u64";
-          };
+          "name": "vaultProgram"
         },
-      ];
-    },
-  ];
-  accounts: [
-    {
-      name: "pool";
-      discriminator: [241, 154, 109, 4, 17, 177, 109, 188];
-    },
-    {
-      name: "vault";
-      discriminator: [211, 8, 232, 43, 2, 152, 117, 119];
-    },
-  ];
-  events: [
-    {
-      name: "poolBalanceUpdatedEvent";
-      discriminator: [172, 82, 114, 207, 27, 103, 211, 4];
-    },
-    {
-      name: "poolUpdatedEvent";
-      discriminator: [128, 39, 94, 221, 230, 222, 127, 141];
-    },
-  ];
-  types: [
-    {
-      name: "pool";
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "owner";
-            type: "pubkey";
-          },
-          {
-            name: "vault";
-            type: "pubkey";
-          },
-          {
-            name: "mint";
-            type: "pubkey";
-          },
-          {
-            name: "authorityBump";
-            type: "u8";
-          },
-          {
-            name: "isActive";
-            type: "bool";
-          },
-          {
-            name: "ampInitialFactor";
-            type: "u16";
-          },
-          {
-            name: "ampTargetFactor";
-            type: "u16";
-          },
-          {
-            name: "rampStartTs";
-            type: "i64";
-          },
-          {
-            name: "rampStopTs";
-            type: "i64";
-          },
-          {
-            name: "swapFee";
-            type: "u64";
-          },
-          {
-            name: "tokens";
-            type: {
-              vec: {
-                defined: {
-                  name: "poolToken";
-                };
-              };
-            };
-          },
-          {
-            name: "pendingOwner";
-            type: {
-              option: "pubkey";
-            };
-          },
-        ];
-      };
+        {
+          "name": "tokenProgram"
+        }
+      ],
+      "args": [
+        {
+          "name": "amountIn",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "minimumAmountOut",
+          "type": "u64"
+        }
+      ]
     },
     {
-      name: "poolBalanceUpdatedData";
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "balances";
-            type: {
-              vec: "u64";
-            };
-          },
-        ];
-      };
+      "name": "swapV2",
+      "discriminator": [
+        43,
+        4,
+        237,
+        11,
+        26,
+        201,
+        30,
+        98
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "signer": true
+        },
+        {
+          "name": "mintIn"
+        },
+        {
+          "name": "mintOut"
+        },
+        {
+          "name": "userTokenIn",
+          "writable": true
+        },
+        {
+          "name": "userTokenOut",
+          "writable": true
+        },
+        {
+          "name": "vaultTokenIn",
+          "writable": true
+        },
+        {
+          "name": "vaultTokenOut",
+          "writable": true
+        },
+        {
+          "name": "beneficiaryTokenOut",
+          "writable": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "withdrawAuthority"
+        },
+        {
+          "name": "vault"
+        },
+        {
+          "name": "vaultAuthority"
+        },
+        {
+          "name": "vaultProgram"
+        },
+        {
+          "name": "tokenProgram"
+        },
+        {
+          "name": "token2022Program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amountIn",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "minimumAmountOut",
+          "type": "u64"
+        }
+      ]
     },
     {
-      name: "poolBalanceUpdatedEvent";
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "pubkey";
-            type: "pubkey";
-          },
-          {
-            name: "data";
-            type: {
-              defined: {
-                name: "poolBalanceUpdatedData";
-              };
-            };
-          },
-        ];
-      };
+      "name": "transferOwner",
+      "discriminator": [
+        245,
+        25,
+        221,
+        175,
+        106,
+        229,
+        225,
+        45
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "newOwner",
+          "type": "pubkey"
+        }
+      ]
     },
     {
-      name: "poolToken";
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "mint";
-            type: "pubkey";
-          },
-          {
-            name: "decimals";
-            type: "u8";
-          },
-          {
-            name: "scalingUp";
-            type: "bool";
-          },
-          {
-            name: "scalingFactor";
-            type: "u64";
-          },
-          {
-            name: "balance";
-            type: "u64";
-          },
-        ];
-      };
+      "name": "unpause",
+      "discriminator": [
+        169,
+        144,
+        4,
+        38,
+        10,
+        141,
+        188,
+        255
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        }
+      ],
+      "args": []
     },
     {
-      name: "poolUpdatedData";
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "isActive";
-            type: "bool";
-          },
-          {
-            name: "ampInitialFactor";
-            type: "u16";
-          },
-          {
-            name: "ampTargetFactor";
-            type: "u16";
-          },
-          {
-            name: "rampStartTs";
-            type: "i64";
-          },
-          {
-            name: "rampStopTs";
-            type: "i64";
-          },
-          {
-            name: "swapFee";
-            type: "u64";
-          },
-        ];
-      };
+      "name": "withdraw",
+      "docs": [
+        "remove liquidity"
+      ],
+      "discriminator": [
+        183,
+        18,
+        70,
+        156,
+        148,
+        109,
+        161,
+        34
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "signer": true
+        },
+        {
+          "name": "userPoolToken",
+          "writable": true
+        },
+        {
+          "name": "mint",
+          "writable": true
+        },
+        {
+          "name": "pool",
+          "writable": true
+        },
+        {
+          "name": "withdrawAuthority"
+        },
+        {
+          "name": "vault"
+        },
+        {
+          "name": "vaultAuthority"
+        },
+        {
+          "name": "vaultProgram"
+        },
+        {
+          "name": "tokenProgram"
+        },
+        {
+          "name": "tokenProgram2022"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "minimumAmountsOut",
+          "type": {
+            "vec": "u64"
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "pool",
+      "discriminator": [
+        241,
+        154,
+        109,
+        4,
+        17,
+        177,
+        109,
+        188
+      ]
     },
     {
-      name: "poolUpdatedEvent";
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "pubkey";
-            type: "pubkey";
-          },
-          {
-            name: "data";
-            type: {
-              defined: {
-                name: "poolUpdatedData";
-              };
-            };
-          },
-        ];
-      };
+      "name": "strategy",
+      "discriminator": [
+        174,
+        110,
+        39,
+        119,
+        82,
+        106,
+        169,
+        102
+      ]
     },
     {
-      name: "vault";
-      type: {
-        kind: "struct";
-        fields: [
-          {
-            name: "admin";
-            type: "pubkey";
-          },
-          {
-            name: "withdrawAuthority";
-            docs: ["PDA of pool programs seeded by vault address"];
-            type: "pubkey";
-          },
-          {
-            name: "withdrawAuthorityBump";
-            docs: ["bump seed of withdraw_authority PDA"];
-            type: "u8";
-          },
-          {
-            name: "authorityBump";
-            docs: ["bump seed of vault_authority PDA"];
-            type: "u8";
-          },
-          {
-            name: "isActive";
-            type: "bool";
-          },
-          {
-            name: "beneficiary";
-            type: "pubkey";
-          },
-          {
-            name: "beneficiaryFee";
-            type: "u64";
-          },
-          {
-            name: "pendingAdmin";
-            type: {
-              option: "pubkey";
-            };
-          },
-        ];
-      };
+      "name": "vault",
+      "discriminator": [
+        211,
+        8,
+        232,
+        43,
+        2,
+        152,
+        117,
+        119
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "poolBalanceUpdatedEvent",
+      "discriminator": [
+        172,
+        82,
+        114,
+        207,
+        27,
+        103,
+        211,
+        4
+      ]
     },
-  ];
+    {
+      "name": "poolUpdatedEvent",
+      "discriminator": [
+        128,
+        39,
+        94,
+        221,
+        230,
+        222,
+        127,
+        141
+      ]
+    }
+  ],
+  "types": [
+    {
+      "name": "pool",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "authorityBump",
+            "type": "u8"
+          },
+          {
+            "name": "isActive",
+            "type": "bool"
+          },
+          {
+            "name": "ampInitialFactor",
+            "type": "u16"
+          },
+          {
+            "name": "ampTargetFactor",
+            "type": "u16"
+          },
+          {
+            "name": "rampStartTs",
+            "type": "i64"
+          },
+          {
+            "name": "rampStopTs",
+            "type": "i64"
+          },
+          {
+            "name": "swapFee",
+            "type": "u64"
+          },
+          {
+            "name": "tokens",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "poolToken"
+                }
+              }
+            }
+          },
+          {
+            "name": "pendingOwner",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "maxSupply",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "poolBalanceUpdatedData",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "balances",
+            "type": {
+              "vec": "u64"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "poolBalanceUpdatedEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pubkey",
+            "type": "pubkey"
+          },
+          {
+            "name": "data",
+            "type": {
+              "defined": {
+                "name": "poolBalanceUpdatedData"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "poolToken",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "decimals",
+            "type": "u8"
+          },
+          {
+            "name": "scalingUp",
+            "type": "bool"
+          },
+          {
+            "name": "scalingFactor",
+            "type": "u64"
+          },
+          {
+            "name": "balance",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "poolUpdatedData",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "isActive",
+            "type": "bool"
+          },
+          {
+            "name": "ampInitialFactor",
+            "type": "u16"
+          },
+          {
+            "name": "ampTargetFactor",
+            "type": "u16"
+          },
+          {
+            "name": "rampStartTs",
+            "type": "i64"
+          },
+          {
+            "name": "rampStopTs",
+            "type": "i64"
+          },
+          {
+            "name": "swapFee",
+            "type": "u64"
+          },
+          {
+            "name": "maxSupply",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "poolUpdatedEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pubkey",
+            "type": "pubkey"
+          },
+          {
+            "name": "data",
+            "type": {
+              "defined": {
+                "name": "poolUpdatedData"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "strategy",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "isActive",
+            "type": "bool"
+          },
+          {
+            "name": "ampMinFactor",
+            "type": "u16"
+          },
+          {
+            "name": "ampMaxFactor",
+            "type": "u16"
+          },
+          {
+            "name": "rampMinStep",
+            "type": "u16"
+          },
+          {
+            "name": "rampMaxStep",
+            "type": "u16"
+          },
+          {
+            "name": "rampMinDuration",
+            "type": "u32"
+          },
+          {
+            "name": "rampMaxDuration",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "vault",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "withdrawAuthority",
+            "docs": [
+              "PDA of pool programs seeded by vault address"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "withdrawAuthorityBump",
+            "docs": [
+              "bump seed of withdraw_authority PDA"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "authorityBump",
+            "docs": [
+              "bump seed of vault_authority PDA"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "isActive",
+            "type": "bool"
+          },
+          {
+            "name": "beneficiary",
+            "type": "pubkey"
+          },
+          {
+            "name": "beneficiaryFee",
+            "type": "u64"
+          },
+          {
+            "name": "pendingAdmin",
+            "type": {
+              "option": "pubkey"
+            }
+          }
+        ]
+      }
+    }
+  ]
 };

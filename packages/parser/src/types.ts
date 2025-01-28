@@ -1,5 +1,3 @@
-import { EnrichedTransaction } from "helius-sdk";
-
 export enum TransactionVariant {
   CREATE = "create",
   CLOSE = "close",
@@ -37,9 +35,3 @@ export type InstructionLog<T> = {
   parentProgramId: string | null;
   programId: string;
 } & T;
-
-export type ParsedTransactions = {
-  creates: InstructionLog<CreatePool>[];
-  closes: InstructionLog<ClosePool>[];
-  poolActivities: InstructionLog<PoolActivity>[];
-};
