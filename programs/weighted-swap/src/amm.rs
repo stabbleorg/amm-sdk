@@ -87,7 +87,7 @@ impl Amm for WeightedSwap {
             .unwrap();
         let (amount_out, amount_fee) = self
             .state
-            .get_swap_result(token_in_index, token_out_index, quote_params.amount, 0)
+            .get_swap_result(token_in_index, token_out_index, quote_params.amount)
             .unwrap();
 
         Ok(Quote {

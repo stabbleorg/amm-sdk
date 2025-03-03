@@ -10,7 +10,6 @@ anchor-lang = "0.30.1"
 anyhow = "1.0.86"
 jupiter-amm-interface = { git = "https://github.com/jup-ag/jupiter-amm-interface.git", rev = "abfb1abbdf574c5406193a67fae1d34e9d706f46" }
 rust_decimal = "1.26.1"
-solana-program = "1.18.22"
 spl-token = { version = "3", features = ["no-entrypoint"] }
 spl-token-2022 = { version = "4",  features = ["no-entrypoint"] }
 spl-associated-token-account = { version = "3", features = ["no-entrypoint"] }

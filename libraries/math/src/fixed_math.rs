@@ -8,6 +8,8 @@ pub const ONE: u64 = 1_000_000_000;
 
 pub const TWO: u64 = 2_000_000_000;
 
+pub const THREE: u64 = 3_000_000_000;
+
 pub const FOUR: u64 = 4_000_000_000;
 
 pub const SCALE: u32 = 9;
@@ -50,14 +52,15 @@ pub trait FixedComplement<RHS = Self> {
 
 impl FixedPow for u64 {
     type Output = u64;
-    // Optimize for when y equals 1.0, 2.0 or 4.0, as those are very simple to implement and occur often in 50/50
-    // and 80/20 Weighted Pools
+    // Optimize for when y equals 1.0, 2.0, 3.0 or 4.0, as those are very simple to implement and occur often in
+    // 50/50, 80/20 and 60/20/20 Weighted Pools
 
     fn pow_down(self, rhs: Self) -> Option<Self::Output> {
         match rhs {
             ZERO => Some(ONE),
             ONE => Some(self),
             TWO => self.mul_down(self),
+            THREE => self.mul_down(self)?.mul_down(self),
             FOUR => {
                 let square = self.mul_down(self)?;
                 square.mul_down(square)
@@ -75,6 +78,7 @@ impl FixedPow for u64 {
             ZERO => Some(ONE),
             ONE => Some(self),
             TWO => self.mul_up(self),
+            THREE => self.mul_up(self)?.mul_up(self),
             FOUR => {
                 let square = self.mul_up(self)?;
                 square.mul_up(square)

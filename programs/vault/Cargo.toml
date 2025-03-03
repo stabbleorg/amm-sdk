@@ -10,4 +10,3 @@ no-entrypoint = []
 
 [dependencies]
 anchor-lang = { workspace = true }
-solana-program = { workspace = true }
