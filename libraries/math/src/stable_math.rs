@@ -9,7 +9,7 @@ pub const AMP_PRECISION: u64 = 1_000;
 pub const MIN_AMP: u16 = 1;
 pub const MAX_AMP: u16 = 8000;
 
-pub const MIN_SWAP_FEE: u64 = 1_000; // 0.0001%
+pub const MIN_SWAP_FEE: u64 = 10_000; // 0.001%
 pub const MAX_SWAP_FEE: u64 = 10_000_000; // 1%
 
 // Safe max balance supported by stable_math
