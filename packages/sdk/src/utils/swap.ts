@@ -42,6 +42,7 @@ export class Swap {
     minimumAmountOut,
     referrer,
     priorityLevel,
+    maxPriorityMicroLamports,
     altAccounts,
   }: TransactionArgs<{
     weightedSwap: WeightedSwapContext;
@@ -168,6 +169,7 @@ export class Swap {
         signers,
         altAccounts,
         priorityLevel,
+        maxPriorityMicroLamports,
       );
     }
     // 3-hop swap
@@ -293,10 +295,22 @@ export class Swap {
       }
 
       if (shouldSplit) {
-        const signature = await weightedSwap.sendSmartTransaction(instructions, signers, altAccounts, priorityLevel);
+        const signature = await weightedSwap.sendSmartTransaction(
+          instructions,
+          signers,
+          altAccounts,
+          priorityLevel,
+          maxPriorityMicroLamports,
+        );
 
         if (signature) {
-          return weightedSwap.sendSmartTransaction(closeInstructions, [], altAccounts, priorityLevel);
+          return weightedSwap.sendSmartTransaction(
+            closeInstructions,
+            [],
+            altAccounts,
+            priorityLevel,
+            maxPriorityMicroLamports,
+          );
         }
 
         return "";
@@ -307,6 +321,7 @@ export class Swap {
         signers,
         altAccounts,
         priorityLevel,
+        maxPriorityMicroLamports,
       );
     }
     // 4-hop swap

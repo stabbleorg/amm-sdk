@@ -1,5 +1,5 @@
 import bs58 from "bs58";
-import { InnerInstruction, Instruction, TokenTransfer } from "helius-sdk";
+import { InnerInstruction, Instruction, TokenStandard, TokenTransfer } from "helius-sdk";
 import {
   burnInstructionData,
   burnCheckedInstructionData,
@@ -30,6 +30,17 @@ const DISCRIMINATORS: Record<string, TransactionVariant> = {
   b712469c946da122: TransactionVariant.WITHDRAW,
 };
 
+const EMPTY_TOKEN_TRANSFER: TokenTransfer = {
+  fromUserAccount: null,
+  toUserAccount: null,
+  fromTokenAccount: null,
+  toTokenAccount: null,
+  tokenAmount: 0,
+  decimals: -1,
+  tokenStandard: TokenStandard.FUNGIBLE,
+  mint: "",
+};
+
 export function getTransactionVariant(instruction: Instruction | InnerInstruction): TransactionVariant | null {
   if (instruction.programId !== WEIGHTED_SWAP_ADDRESS && instruction.programId !== STABLE_SWAP_ADDRESS) {
     return null;
@@ -48,6 +59,7 @@ export function getTokenBurnFromInnerInstruction(
 
   if (buffer.length === 9) {
     const data = burnInstructionData.decode(buffer);
+
     transfer = tokenTransfers.find(
       (transfer) =>
         transfer.tokenAmount === SafeAmount.toUiAmount(data.amount, mintDecimals[transfer.mint]) &&
@@ -57,6 +69,7 @@ export function getTokenBurnFromInnerInstruction(
     );
   } else if (buffer.length === 10) {
     const data = burnCheckedInstructionData.decode(buffer);
+
     transfer = tokenTransfers.find(
       (transfer) =>
         transfer.tokenAmount === SafeAmount.toUiAmount(data.amount, mintDecimals[transfer.mint]) &&
@@ -79,6 +92,7 @@ export function getTokenMintToFromInnerInstruction(
 
   if (buffer.length === 9) {
     const data = mintToInstructionData.decode(buffer);
+
     transfer = tokenTransfers.find(
       (transfer) =>
         transfer.tokenAmount === SafeAmount.toUiAmount(data.amount, mintDecimals[transfer.mint]) &&
@@ -87,6 +101,7 @@ export function getTokenMintToFromInnerInstruction(
     );
   } else if (buffer.length === 10) {
     const data = mintToCheckedInstructionData.decode(buffer);
+
     transfer = tokenTransfers.find(
       (transfer) =>
         transfer.tokenAmount === SafeAmount.toUiAmount(data.amount, mintDecimals[transfer.mint]) &&
@@ -108,6 +123,11 @@ export function getTokenTransferFromInnerInstruction(
 
   if (buffer.length === 9) {
     const data = transferInstructionData.decode(buffer);
+
+    if (data.amount === BigInt(0)) {
+      return EMPTY_TOKEN_TRANSFER;
+    }
+
     transfer = tokenTransfers.find(
       (transfer) =>
         transfer.tokenAmount === SafeAmount.toUiAmount(data.amount, mintDecimals[transfer.mint]) &&
@@ -117,6 +137,11 @@ export function getTokenTransferFromInnerInstruction(
     );
   } else if (buffer.length === 10) {
     const data = transferCheckedInstructionData.decode(buffer);
+
+    if (data.amount === BigInt(0)) {
+      return EMPTY_TOKEN_TRANSFER;
+    }
+
     transfer = tokenTransfers.find(
       (transfer) =>
         transfer.tokenAmount === SafeAmount.toUiAmount(data.amount, mintDecimals[transfer.mint]) &&
@@ -262,7 +287,7 @@ export function parseWithdraw(
       activities.push({
         address: poolAddress,
         tokenAddress: burn.mint,
-        userAddress: burn.toUserAccount,
+        userAddress: burn.fromUserAccount,
         amount: burn.tokenAmount,
         variant,
       });
@@ -273,7 +298,7 @@ export function parseWithdraw(
       activities.push({
         address: poolAddress,
         tokenAddress: transfer.mint,
-        userAddress: transfer.fromUserAccount,
+        userAddress: transfer.toUserAccount,
         amount: -transfer.tokenAmount,
         variant,
       });

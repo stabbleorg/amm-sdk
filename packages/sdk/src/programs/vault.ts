@@ -41,6 +41,7 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
     beneficiaryFee,
     kind,
     priorityLevel,
+    maxPriorityMicroLamports,
     altAccounts,
   }: TransactionArgs<{
     keypair?: Keypair;
@@ -88,7 +89,13 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
         .instruction(),
     ];
 
-    const signature = await this.sendSmartTransaction(instructions, [keypair], altAccounts, priorityLevel);
+    const signature = await this.sendSmartTransaction(
+      instructions,
+      [keypair],
+      altAccounts,
+      priorityLevel,
+      maxPriorityMicroLamports,
+    );
 
     return { address: keypair.publicKey, signature };
   }
@@ -97,6 +104,7 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
     vault,
     mintAddresses,
     priorityLevel,
+    maxPriorityMicroLamports,
     altAccounts,
   }: TransactionArgs<{
     vault: Vault;
@@ -128,13 +136,14 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
 
     if (!instructions.length) return null;
 
-    return this.sendSmartTransaction(instructions, [], altAccounts, priorityLevel);
+    return this.sendSmartTransaction(instructions, [], altAccounts, priorityLevel, maxPriorityMicroLamports);
   }
 
   async changeBeneficiary({
     vault,
     beneficiaryAddress,
     priorityLevel,
+    maxPriorityMicroLamports,
     altAccounts,
   }: TransactionArgs<{ vault: Vault; beneficiaryAddress: PublicKey }>): Promise<TransactionSignature> {
     const instruction = await this.program.methods
@@ -145,13 +154,14 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
       })
       .instruction();
 
-    return this.sendSmartTransaction([instruction], [], altAccounts, priorityLevel);
+    return this.sendSmartTransaction([instruction], [], altAccounts, priorityLevel, maxPriorityMicroLamports);
   }
 
   async transferAdmin({
     vault,
     adminAddress,
     priorityLevel,
+    maxPriorityMicroLamports,
     altAccounts,
   }: TransactionArgs<{ vault: Vault; adminAddress: PublicKey }>): Promise<TransactionSignature> {
     const instruction = await this.program.methods
@@ -162,7 +172,7 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
       })
       .instruction();
 
-    return this.sendSmartTransaction([instruction], [], altAccounts, priorityLevel);
+    return this.sendSmartTransaction([instruction], [], altAccounts, priorityLevel, maxPriorityMicroLamports);
   }
 }
 

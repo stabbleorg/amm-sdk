@@ -52,41 +52,41 @@ export const parseTransaction = ({
         case TransactionVariant.SWAP:
         case TransactionVariant.SWAP_V2:
           poolActivities.push(
-            ...parseSwap(instruction, tokenTransfers, confidentMintDecimals).map<InstructionLog<PoolActivity>>(
-              (activity) => ({
+            ...parseSwap(instruction, tokenTransfers, confidentMintDecimals)
+              .filter((activity) => activity.amount !== 0)
+              .map<InstructionLog<PoolActivity>>((activity) => ({
                 signature: transaction.signature,
                 instructionIndex: instructionOffset,
                 parentProgramId: null,
                 programId: instruction.programId,
                 ...activity,
-              }),
-            ),
+              })),
           );
           break;
         case TransactionVariant.DEPOSIT:
           poolActivities.push(
-            ...parseDeposit(instruction, tokenTransfers, confidentMintDecimals).map<InstructionLog<PoolActivity>>(
-              (activity) => ({
+            ...parseDeposit(instruction, tokenTransfers, confidentMintDecimals)
+              .filter((activity) => activity.amount !== 0)
+              .map<InstructionLog<PoolActivity>>((activity) => ({
                 signature: transaction.signature,
                 instructionIndex: instructionOffset,
                 parentProgramId: null,
                 programId: instruction.programId,
                 ...activity,
-              }),
-            ),
+              })),
           );
           break;
         case TransactionVariant.WITHDRAW:
           poolActivities.push(
-            ...parseWithdraw(instruction, tokenTransfers, confidentMintDecimals).map<InstructionLog<PoolActivity>>(
-              (activity) => ({
+            ...parseWithdraw(instruction, tokenTransfers, confidentMintDecimals)
+              .filter((activity) => activity.amount !== 0)
+              .map<InstructionLog<PoolActivity>>((activity) => ({
                 signature: transaction.signature,
                 instructionIndex: instructionOffset,
                 parentProgramId: null,
                 programId: instruction.programId,
                 ...activity,
-              }),
-            ),
+              })),
           );
           break;
         case TransactionVariant.CREATE:
@@ -125,13 +125,15 @@ export const parseTransaction = ({
               confidentMintDecimals,
             );
             poolActivities.push(
-              ...cpiSwaps.map<InstructionLog<PoolActivity>>((activity) => ({
-                signature: transaction.signature,
-                instructionIndex: instructionOffset + i,
-                parentProgramId: instruction.programId,
-                programId: innerInstruction.programId,
-                ...activity,
-              })),
+              ...cpiSwaps
+                .filter((activity) => activity.amount !== 0)
+                .map<InstructionLog<PoolActivity>>((activity) => ({
+                  signature: transaction.signature,
+                  instructionIndex: instructionOffset + i,
+                  parentProgramId: instruction.programId,
+                  programId: innerInstruction.programId,
+                  ...activity,
+                })),
             );
             i += cpiSwaps.length === 3 ? 5 : 4;
             break;
@@ -142,13 +144,15 @@ export const parseTransaction = ({
               confidentMintDecimals,
             );
             poolActivities.push(
-              ...cpiDeposits.map<InstructionLog<PoolActivity>>((activity) => ({
-                signature: transaction.signature,
-                instructionIndex: instructionOffset + i,
-                parentProgramId: instruction.programId,
-                programId: innerInstruction.programId,
-                ...activity,
-              })),
+              ...cpiDeposits
+                .filter((activity) => activity.amount !== 0)
+                .map<InstructionLog<PoolActivity>>((activity) => ({
+                  signature: transaction.signature,
+                  instructionIndex: instructionOffset + i,
+                  parentProgramId: instruction.programId,
+                  programId: innerInstruction.programId,
+                  ...activity,
+                })),
             );
             i += cpiDeposits.length + 1;
             break;
@@ -159,13 +163,15 @@ export const parseTransaction = ({
               confidentMintDecimals,
             );
             poolActivities.push(
-              ...cpiWithdraws.map<InstructionLog<PoolActivity>>((activity) => ({
-                signature: transaction.signature,
-                instructionIndex: instructionOffset + i,
-                parentProgramId: instruction.programId,
-                programId: innerInstruction.programId,
-                ...activity,
-              })),
+              ...cpiWithdraws
+                .filter((activity) => activity.amount !== 0)
+                .map<InstructionLog<PoolActivity>>((activity) => ({
+                  signature: transaction.signature,
+                  instructionIndex: instructionOffset + i,
+                  parentProgramId: instruction.programId,
+                  programId: innerInstruction.programId,
+                  ...activity,
+                })),
             );
             i += cpiWithdraws.length * 2;
             break;
