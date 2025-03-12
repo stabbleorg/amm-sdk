@@ -1,7 +1,9 @@
 import BN from "bn.js";
 import { Program, Provider } from "@coral-xyz/anchor";
-import { Metaplex } from "@metaplex-foundation/js";
-import { createCreateMetadataAccountV3Instruction } from "@metaplex-foundation/mpl-token-metadata";
+import {
+  createCreateMetadataAccountV3Instruction,
+  PROGRAM_ID as MPL_TOKEN_METADATA_PROGRAM_ID,
+} from "@metaplex-foundation/mpl-token-metadata";
 import {
   AuthorityType,
   MintLayout,
@@ -42,12 +44,10 @@ export type WeightedSwapProgram = Program<IDLType>;
 
 export class WeightedSwapContext<T extends Provider = Provider> extends WalletContext<T> {
   readonly program: WeightedSwapProgram;
-  readonly metaplex: Metaplex;
 
   constructor(provider: T) {
     super(provider);
-    this.program = new Program(IDL as any, provider);
-    this.metaplex = Metaplex.make(provider.connection);
+    this.program = new Program(IDL, provider);
   }
 
   async loadPool(address: PublicKey, vault?: Vault): Promise<WeightedPool> {
@@ -105,6 +105,11 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
     const mintAccounts = await this.provider.connection.getMultipleAccountsInfo(mintAddresses);
     const mints = mintAccounts.map((account, index) => unpackMint(mintAddresses[index], account!, account!.owner));
 
+    const [metadataAddress] = PublicKey.findProgramAddressSync(
+      [Buffer.from("metadata"), MPL_TOKEN_METADATA_PROGRAM_ID.toBytes(), poolMintKP.publicKey.toBytes()],
+      MPL_TOKEN_METADATA_PROGRAM_ID,
+    );
+
     const instructions: TransactionInstruction[] = [
       SystemProgram.createAccount({
         fromPubkey: this.walletAddress,
@@ -121,7 +126,7 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
       ),
       createCreateMetadataAccountV3Instruction(
         {
-          metadata: this.metaplex.nfts().pdas().metadata({ mint: poolMintKP.publicKey }),
+          metadata: metadataAddress,
           mint: poolMintKP.publicKey,
           mintAuthority: this.walletAddress,
           payer: this.walletAddress,

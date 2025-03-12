@@ -2,7 +2,7 @@
   "address": "vo1tWgqZMjG61Z2T9qUaMYKqZ75CYzMuaZ2LZP1n7HV",
   "metadata": {
     "name": "vault",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "spec": "0.1.0",
     "description": "Created with Anchor"
   },

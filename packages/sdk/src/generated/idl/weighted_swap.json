@@ -2,7 +2,7 @@
   "address": "swapFpHZwjELNnjvThjajtiVmkz3yPQEHjLtka2fwHW",
   "metadata": {
     "name": "weighted_swap",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "spec": "0.1.0",
     "description": "Created with Anchor"
   },
