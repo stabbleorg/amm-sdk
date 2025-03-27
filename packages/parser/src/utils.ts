@@ -10,7 +10,7 @@ import {
   TOKEN_2022_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
-import { STABLE_SWAP_ID, WEIGHTED_SWAP_ID } from "@stabbleorg/amm-sdk";
+import { STABLE_SWAP_PROGRAM_ID, WEIGHTED_SWAP_PROGRAM_ID } from "@stabbleorg/amm-sdk";
 import { SafeAmount } from "@stabbleorg/anchor-contrib";
 import { ClosePool, CreatePool, PoolActivity, TransactionVariant } from "./types";
 import { TokenTransferNotFound } from "./errors";
@@ -18,8 +18,8 @@ import { TokenTransferNotFound } from "./errors";
 const TOKEN_2022_PROGRAM_ADDRESS = TOKEN_2022_PROGRAM_ID.toBase58();
 const TOKEN_PROGRAM_ADDRESS = TOKEN_PROGRAM_ID.toBase58();
 
-const STABLE_SWAP_ADDRESS = STABLE_SWAP_ID.toBase58();
-const WEIGHTED_SWAP_ADDRESS = WEIGHTED_SWAP_ID.toBase58();
+const STABLE_SWAP_ADDRESS = STABLE_SWAP_PROGRAM_ID.toBase58();
+const WEIGHTED_SWAP_ADDRESS = WEIGHTED_SWAP_PROGRAM_ID.toBase58();
 
 const DISCRIMINATORS: Record<string, TransactionVariant> = {
   afaf6d1f0d989bed: TransactionVariant.CREATE,

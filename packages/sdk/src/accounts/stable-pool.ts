@@ -3,7 +3,7 @@ import { PublicKey } from "@solana/web3.js";
 import { SafeAmount } from "@stabbleorg/anchor-contrib";
 import { Pool, PoolData, PoolToken, PoolTokenData } from "./base-pool";
 import { Vault } from "./vault";
-import { STABLE_SWAP_ID } from "../programs";
+import { STABLE_SWAP_PROGRAM_ID } from "../programs";
 import { BasicMath, StableMath } from "../utils";
 
 export type StablePoolTokenData = PoolTokenData;
@@ -283,7 +283,10 @@ export class StablePool implements Pool<StablePoolData> {
   }
 
   static getAuthorityAddress(poolAddress: PublicKey): PublicKey {
-    return PublicKey.findProgramAddressSync([Buffer.from("pool_authority"), poolAddress.toBuffer()], STABLE_SWAP_ID)[0];
+    return PublicKey.findProgramAddressSync(
+      [Buffer.from("pool_authority"), poolAddress.toBuffer()],
+      STABLE_SWAP_PROGRAM_ID,
+    )[0];
   }
 
   static getWithdrawAuthorityAddress(vaultAddress: PublicKey): PublicKey {
@@ -293,7 +296,7 @@ export class StablePool implements Pool<StablePoolData> {
   static getWithdrawAuthorityAddressAndBump(vaultAddress: PublicKey): [PublicKey, number] {
     return PublicKey.findProgramAddressSync(
       [Buffer.from("withdraw_authority"), vaultAddress.toBuffer()],
-      STABLE_SWAP_ID,
+      STABLE_SWAP_PROGRAM_ID,
     );
   }
 }

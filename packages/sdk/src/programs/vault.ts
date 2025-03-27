@@ -13,9 +13,16 @@ import { Vault, VaultData, WeightedPool, StablePool } from "../accounts";
 import { type Vault as IDLType } from "../generated/vault";
 import IDL from "../generated/idl/vault.json";
 
+/**
+ * @deprecated Use `AMM_VAULT_PROGRAM_ID` instead.
+ */
 export const AMM_VAULT_ID = new PublicKey(IDL.address);
-export type PoolKind = "stable_swap" | "weighted_swap";
+export const AMM_VAULT_PROGRAM_ID = new PublicKey(IDL.address);
+export const AMM_ERRORS = new Map(IDL.errors.map((error) => [error.code, error.msg]));
+
 export type VaultProgram = Program<IDLType>;
+
+export type PoolKind = "stable_swap" | "weighted_swap";
 
 export class VaultContext<T extends Provider> extends WalletContext<T> {
   readonly program: VaultProgram;
@@ -40,9 +47,10 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
     beneficiaryAddress,
     beneficiaryFee,
     kind,
+    altAccounts,
     priorityLevel,
     maxPriorityMicroLamports,
-    altAccounts,
+    simulate,
   }: TransactionArgs<{
     keypair?: Keypair;
     beneficiaryAddress: PublicKey;
@@ -95,6 +103,7 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
       altAccounts,
       priorityLevel,
       maxPriorityMicroLamports,
+      simulate,
     );
 
     return { address: keypair.publicKey, signature };
@@ -103,9 +112,10 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
   async createMissingTokenAccounts({
     vault,
     mintAddresses,
+    altAccounts,
     priorityLevel,
     maxPriorityMicroLamports,
-    altAccounts,
+    simulate,
   }: TransactionArgs<{
     vault: Vault;
     mintAddresses: PublicKey[];
@@ -136,15 +146,16 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
 
     if (!instructions.length) return null;
 
-    return this.sendSmartTransaction(instructions, [], altAccounts, priorityLevel, maxPriorityMicroLamports);
+    return this.sendSmartTransaction(instructions, [], altAccounts, priorityLevel, maxPriorityMicroLamports, simulate);
   }
 
   async changeBeneficiary({
     vault,
     beneficiaryAddress,
+    altAccounts,
     priorityLevel,
     maxPriorityMicroLamports,
-    altAccounts,
+    simulate,
   }: TransactionArgs<{ vault: Vault; beneficiaryAddress: PublicKey }>): Promise<TransactionSignature> {
     const instruction = await this.program.methods
       .changeBeneficiary(beneficiaryAddress)
@@ -154,15 +165,16 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
       })
       .instruction();
 
-    return this.sendSmartTransaction([instruction], [], altAccounts, priorityLevel, maxPriorityMicroLamports);
+    return this.sendSmartTransaction([instruction], [], altAccounts, priorityLevel, maxPriorityMicroLamports, simulate);
   }
 
   async transferAdmin({
     vault,
     adminAddress,
+    altAccounts,
     priorityLevel,
     maxPriorityMicroLamports,
-    altAccounts,
+    simulate,
   }: TransactionArgs<{ vault: Vault; adminAddress: PublicKey }>): Promise<TransactionSignature> {
     const instruction = await this.program.methods
       .transferAdmin(adminAddress)
@@ -172,7 +184,7 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
       })
       .instruction();
 
-    return this.sendSmartTransaction([instruction], [], altAccounts, priorityLevel, maxPriorityMicroLamports);
+    return this.sendSmartTransaction([instruction], [], altAccounts, priorityLevel, maxPriorityMicroLamports, simulate);
   }
 }
 

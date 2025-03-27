@@ -3,7 +3,7 @@ import { PublicKey } from "@solana/web3.js";
 import { SafeAmount } from "@stabbleorg/anchor-contrib";
 import { Pool, PoolData, PoolToken, PoolTokenData } from "./base-pool";
 import { Vault } from "./vault";
-import { WEIGHTED_SWAP_ID } from "../programs";
+import { WEIGHTED_SWAP_PROGRAM_ID } from "../programs";
 import { BasicMath, WeightedMath } from "../utils";
 
 export type WeightedPoolTokenData = PoolTokenData & {
@@ -267,7 +267,7 @@ export class WeightedPool implements Pool<WeightedPoolData> {
   static getAuthorityAddress(poolAddress: PublicKey): PublicKey {
     return PublicKey.findProgramAddressSync(
       [Buffer.from("pool_authority"), poolAddress.toBuffer()],
-      WEIGHTED_SWAP_ID,
+      WEIGHTED_SWAP_PROGRAM_ID,
     )[0];
   }
 
@@ -278,7 +278,7 @@ export class WeightedPool implements Pool<WeightedPoolData> {
   static getWithdrawAuthorityAddressAndBump(vaultAddress: PublicKey): [PublicKey, number] {
     return PublicKey.findProgramAddressSync(
       [Buffer.from("withdraw_authority"), vaultAddress.toBuffer()],
-      WEIGHTED_SWAP_ID,
+      WEIGHTED_SWAP_PROGRAM_ID,
     );
   }
 }

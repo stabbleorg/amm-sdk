@@ -14,7 +14,7 @@ export type PoolData = {
   owner: PublicKey;
   vault: PublicKey;
   mint: PublicKey;
-  authorityBump: number; // u8
+  // authorityBump: number;
   isActive: boolean;
   swapFee: BN; // u64
   pendingOwner: PublicKey | null;
