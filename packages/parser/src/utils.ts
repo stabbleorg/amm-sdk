@@ -12,7 +12,7 @@ import {
 } from "@solana/spl-token";
 import { STABLE_SWAP_PROGRAM_ID, WEIGHTED_SWAP_PROGRAM_ID } from "@stabbleorg/amm-sdk";
 import { SafeAmount } from "@stabbleorg/anchor-contrib";
-import { ClosePool, CreatePool, PoolActivity, TransactionVariant } from "./types";
+import { ClosePool, CreatePool, PoolActivity, TokenTransferWithU64, TransactionVariant } from "./types";
 import { TokenTransferNotFound } from "./errors";
 
 const TOKEN_2022_PROGRAM_ADDRESS = TOKEN_2022_PROGRAM_ID.toBase58();
@@ -30,12 +30,13 @@ const DISCRIMINATORS: Record<string, TransactionVariant> = {
   b712469c946da122: TransactionVariant.WITHDRAW,
 };
 
-const EMPTY_TOKEN_TRANSFER: TokenTransfer = {
+const EMPTY_TOKEN_TRANSFER: TokenTransferWithU64 = {
   fromUserAccount: null,
   toUserAccount: null,
   fromTokenAccount: null,
   toTokenAccount: null,
   tokenAmount: 0,
+  rawAmount: "0",
   decimals: -1,
   tokenStandard: TokenStandard.FUNGIBLE,
   mint: "",
@@ -52,17 +53,18 @@ export function getTransactionVariant(instruction: Instruction | InnerInstructio
 export function getTokenBurnFromInnerInstruction(
   tokenTransfers: TokenTransfer[],
   innerInstruction: InnerInstruction,
-  mintDecimals: Record<string, number>,
-): TokenTransfer | null {
-  let transfer;
+  mintDecimals: Map<string, number>,
+): TokenTransferWithU64 | null {
+  let rawAmount, transfer;
   const buffer = Buffer.from(Array.from(bs58.decode(innerInstruction.data)));
 
   if (buffer.length === 9) {
     const data = burnInstructionData.decode(buffer);
 
+    rawAmount = data.amount.toString();
     transfer = tokenTransfers.find(
       (transfer) =>
-        transfer.tokenAmount === SafeAmount.toUiAmount(data.amount, mintDecimals[transfer.mint]) &&
+        transfer.tokenAmount === SafeAmount.toUiAmount(data.amount, mintDecimals.get(transfer.mint)!) &&
         transfer.mint === innerInstruction.accounts[1] &&
         transfer.fromTokenAccount === innerInstruction.accounts[0] &&
         transfer.fromUserAccount === innerInstruction.accounts[2],
@@ -70,55 +72,58 @@ export function getTokenBurnFromInnerInstruction(
   } else if (buffer.length === 10) {
     const data = burnCheckedInstructionData.decode(buffer);
 
+    rawAmount = data.amount.toString();
     transfer = tokenTransfers.find(
       (transfer) =>
-        transfer.tokenAmount === SafeAmount.toUiAmount(data.amount, mintDecimals[transfer.mint]) &&
+        transfer.tokenAmount === SafeAmount.toUiAmount(data.amount, mintDecimals.get(transfer.mint)!) &&
         transfer.mint === innerInstruction.accounts[1] &&
         transfer.fromTokenAccount === innerInstruction.accounts[0] &&
         transfer.fromUserAccount === innerInstruction.accounts[2],
     );
   }
 
-  return transfer ?? null;
+  return transfer && rawAmount ? { ...transfer, rawAmount } : null;
 }
 
 export function getTokenMintToFromInnerInstruction(
   tokenTransfers: TokenTransfer[],
   innerInstruction: InnerInstruction,
-  mintDecimals: Record<string, number>,
-): TokenTransfer | null {
-  let transfer;
+  mintDecimals: Map<string, number>,
+): TokenTransferWithU64 | null {
+  let rawAmount, transfer;
   const buffer = Buffer.from(Array.from(bs58.decode(innerInstruction.data)));
 
   if (buffer.length === 9) {
     const data = mintToInstructionData.decode(buffer);
 
+    rawAmount = data.amount.toString();
     transfer = tokenTransfers.find(
       (transfer) =>
-        transfer.tokenAmount === SafeAmount.toUiAmount(data.amount, mintDecimals[transfer.mint]) &&
+        transfer.tokenAmount === SafeAmount.toUiAmount(data.amount, mintDecimals.get(transfer.mint)!) &&
         transfer.mint === innerInstruction.accounts[0] &&
         transfer.toTokenAccount === innerInstruction.accounts[1],
     );
   } else if (buffer.length === 10) {
     const data = mintToCheckedInstructionData.decode(buffer);
 
+    rawAmount = data.amount.toString();
     transfer = tokenTransfers.find(
       (transfer) =>
-        transfer.tokenAmount === SafeAmount.toUiAmount(data.amount, mintDecimals[transfer.mint]) &&
+        transfer.tokenAmount === SafeAmount.toUiAmount(data.amount, mintDecimals.get(transfer.mint)!) &&
         transfer.mint === innerInstruction.accounts[0] &&
         transfer.toTokenAccount === innerInstruction.accounts[1],
     );
   }
 
-  return transfer ?? null;
+  return transfer && rawAmount ? { ...transfer, rawAmount } : null;
 }
 
 export function getTokenTransferFromInnerInstruction(
   tokenTransfers: TokenTransfer[],
   innerInstruction: InnerInstruction,
-  mintDecimals: Record<string, number>,
-): TokenTransfer | null {
-  let transfer;
+  mintDecimals: Map<string, number>,
+): TokenTransferWithU64 | null {
+  let rawAmount, transfer;
   const buffer = Buffer.from(Array.from(bs58.decode(innerInstruction.data)));
 
   if (buffer.length === 9) {
@@ -128,12 +133,12 @@ export function getTokenTransferFromInnerInstruction(
       return EMPTY_TOKEN_TRANSFER;
     }
 
+    rawAmount = data.amount.toString();
     transfer = tokenTransfers.find(
       (transfer) =>
-        transfer.tokenAmount === SafeAmount.toUiAmount(data.amount, mintDecimals[transfer.mint]) &&
+        transfer.tokenAmount === SafeAmount.toUiAmount(data.amount, mintDecimals.get(transfer.mint)!) &&
         transfer.fromTokenAccount === innerInstruction.accounts[0] &&
-        transfer.toTokenAccount === innerInstruction.accounts[1] &&
-        transfer.fromUserAccount === innerInstruction.accounts[2],
+        transfer.toTokenAccount === innerInstruction.accounts[1],
     );
   } else if (buffer.length === 10) {
     const data = transferCheckedInstructionData.decode(buffer);
@@ -142,22 +147,22 @@ export function getTokenTransferFromInnerInstruction(
       return EMPTY_TOKEN_TRANSFER;
     }
 
+    rawAmount = data.amount.toString();
     transfer = tokenTransfers.find(
       (transfer) =>
-        transfer.tokenAmount === SafeAmount.toUiAmount(data.amount, mintDecimals[transfer.mint]) &&
+        transfer.tokenAmount === SafeAmount.toUiAmount(data.amount, mintDecimals.get(transfer.mint)!) &&
         transfer.fromTokenAccount === innerInstruction.accounts[0] &&
-        transfer.toTokenAccount === innerInstruction.accounts[2] &&
-        transfer.fromUserAccount === innerInstruction.accounts[3],
+        transfer.toTokenAccount === innerInstruction.accounts[2],
     );
   }
 
-  return transfer ?? null;
+  return transfer && rawAmount ? { ...transfer, rawAmount } : null;
 }
 
 export function parseSwap(
   instruction: Instruction,
   tokenTransfers: TokenTransfer[],
-  mintDecimals: Record<string, number>,
+  mintDecimals: Map<string, number>,
 ): PoolActivity[] {
   const activities: PoolActivity[] = [];
 
@@ -174,7 +179,7 @@ export function parseSwap(
   );
   if (!transferIn) throw TokenTransferNotFound;
 
-  let transferOut: TokenTransfer | null;
+  let transferOut: TokenTransferWithU64 | null;
   if (
     instruction.innerInstructions[2].programId === instruction.innerInstructions[3]?.programId &&
     instruction.innerInstructions[2].accounts[0] === instruction.innerInstructions[3].accounts[0]
@@ -191,6 +196,7 @@ export function parseSwap(
       tokenAddress: transferBeneficiary.mint,
       userAddress: null,
       amount: -transferBeneficiary.tokenAmount,
+      amountU64: "-" + transferBeneficiary.rawAmount,
       variant,
     });
 
@@ -206,6 +212,7 @@ export function parseSwap(
       address: poolAddress,
       tokenAddress: transferIn.mint,
       userAddress: transferIn.fromUserAccount,
+      amountU64: transferIn.rawAmount,
       amount: transferIn.tokenAmount,
       variant,
     },
@@ -213,6 +220,7 @@ export function parseSwap(
       address: poolAddress,
       tokenAddress: transferOut.mint,
       userAddress: transferOut.toUserAccount,
+      amountU64: "-" + transferOut.rawAmount,
       amount: -transferOut.tokenAmount,
       variant,
     },
@@ -224,7 +232,7 @@ export function parseSwap(
 export function parseDeposit(
   instruction: Instruction,
   tokenTransfers: TokenTransfer[],
-  mintDecimals: Record<string, number>,
+  mintDecimals: Map<string, number>,
 ): PoolActivity[] {
   const activities: PoolActivity[] = [];
 
@@ -242,6 +250,7 @@ export function parseDeposit(
         address: poolAddress,
         tokenAddress: mintTo.mint,
         userAddress: mintTo.toUserAccount,
+        amountU64: "-" + mintTo.rawAmount,
         amount: -mintTo.tokenAmount,
         variant,
       });
@@ -254,6 +263,7 @@ export function parseDeposit(
         address: poolAddress,
         tokenAddress: transfer.mint,
         userAddress: transfer.fromUserAccount,
+        amountU64: transfer.rawAmount,
         amount: transfer.tokenAmount,
         variant,
       });
@@ -266,7 +276,7 @@ export function parseDeposit(
 export function parseWithdraw(
   instruction: Instruction,
   tokenTransfers: TokenTransfer[],
-  mintDecimals: Record<string, number>,
+  mintDecimals: Map<string, number>,
 ): PoolActivity[] {
   const activities: PoolActivity[] = [];
 
@@ -288,6 +298,7 @@ export function parseWithdraw(
         address: poolAddress,
         tokenAddress: burn.mint,
         userAddress: burn.fromUserAccount,
+        amountU64: burn.rawAmount,
         amount: burn.tokenAmount,
         variant,
       });
@@ -299,6 +310,7 @@ export function parseWithdraw(
         address: poolAddress,
         tokenAddress: transfer.mint,
         userAddress: transfer.toUserAccount,
+        amountU64: "-" + transfer.rawAmount,
         amount: -transfer.tokenAmount,
         variant,
       });
@@ -327,7 +339,7 @@ export function parseClose(instruction: Instruction): ClosePool {
 export function parseSwapCpi(
   innerInstructions: InnerInstruction[],
   tokenTransfers: TokenTransfer[],
-  mintDecimals: Record<string, number>,
+  mintDecimals: Map<string, number>,
 ): PoolActivity[] {
   const instruction: Instruction = {
     ...innerInstructions[0],
@@ -340,7 +352,7 @@ export function parseSwapCpi(
 export function parseDepositCpi(
   innerInstructions: InnerInstruction[],
   tokenTransfers: TokenTransfer[],
-  mintDecimals: Record<string, number>,
+  mintDecimals: Map<string, number>,
 ): PoolActivity[] {
   const instruction: Instruction = {
     ...innerInstructions[0],
@@ -353,7 +365,7 @@ export function parseDepositCpi(
 export function parseWithdrawCpi(
   innerInstructions: InnerInstruction[],
   tokenTransfers: TokenTransfer[],
-  mintDecimals: Record<string, number>,
+  mintDecimals: Map<string, number>,
 ): PoolActivity[] {
   const instruction: Instruction = {
     ...innerInstructions[0],

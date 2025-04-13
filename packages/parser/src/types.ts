@@ -1,3 +1,5 @@
+import { TokenTransfer } from "helius-sdk";
+
 export enum TransactionVariant {
   CREATE = "create",
   CLOSE = "close",
@@ -13,6 +15,7 @@ export type PoolActivity = {
   address: string;
   userAddress: string | null;
   tokenAddress: string;
+  amountU64: string;
   amount: number;
   variant: TransactionVariant;
 };
@@ -35,3 +38,5 @@ export type InstructionLog<T> = {
   parentProgramId: string | null;
   programId: string;
 } & T;
+
+export type TokenTransferWithU64 = TokenTransfer & { rawAmount: string };

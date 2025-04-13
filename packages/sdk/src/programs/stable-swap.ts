@@ -772,7 +772,7 @@ export class StableSwapListener {
     this._poolBalancesUpdatedListener = this.program.addEventListener(
       "poolBalanceUpdatedEvent",
       (event: DataUpdatedEvent<{ balances: BN[] }>, _slot: number, signature: TransactionSignature) => {
-        if (signature !== SIMULATED_SIGNATURE) {
+        if (event.data && signature !== SIMULATED_SIGNATURE) {
           callback({
             pubkey: event.pubkey,
             data: {
