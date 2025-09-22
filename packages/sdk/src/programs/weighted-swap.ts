@@ -200,6 +200,105 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
     return { address: keypair.publicKey, signature };
   }
 
+  async buildDepositInstructions({
+    pool,
+    mintAddresses,
+    amounts,
+    minimumAmountOut = 0,
+    owner = this.walletAddress,
+  }: {
+    pool: WeightedPool;
+    mintAddresses: PublicKey[];
+    amounts: FloatLike[];
+    minimumAmountOut?: FloatLike;
+    owner?: PublicKey;
+  }): Promise<{
+    instructions: TransactionInstruction[];
+    signers: Signer[];
+    userPoolTokenAddress: PublicKey;
+  }> {
+    const instructions: TransactionInstruction[] = [];
+    const signers: Signer[] = [];
+    const userRemainingAccounts: AccountMeta[] = [];
+    const vaultRemainingAccounts: AccountMeta[] = [];
+
+    // Create user's pool token ATA if needed (for receiving LP tokens)
+    const { address: userPoolTokenAddress, instruction: createUserPoolTokenInstruction } =
+      await this.getOrCreateAssociatedTokenAddressInstruction(pool.mintAddress);
+    if (createUserPoolTokenInstruction) instructions.push(createUserPoolTokenInstruction);
+
+    // Process each token to deposit
+    let index = 0;
+    for (const mintAddress of mintAddresses) {
+      let vaultTokenAddress = pool.vault.getAuthorityTokenAddress(mintAddress);
+
+      if (mintAddress.equals(NATIVE_MINT)) {
+        // For SOL: create temporary wrapped SOL account
+        const keypair = Keypair.generate();
+        signers.push(keypair);
+
+        // Create token account and transfer SOL to it
+        instructions.push(
+          ...this.createTokenAccountInstructions(keypair.publicKey),
+          ...this.transferWSOLInstructions(keypair.publicKey, amounts[index]),
+        );
+        userRemainingAccounts.push({ isSigner: false, isWritable: true, pubkey: keypair.publicKey });
+      } else {
+        // For SPL tokens: use user's existing ATA
+        const account = await this.provider.connection.getAccountInfo(mintAddress);
+        const tokenProgramId = account!.owner;
+        const userTokenAddress = this.getAssociatedTokenAddress(mintAddress, tokenProgramId);
+        userRemainingAccounts.push({ isSigner: false, isWritable: true, pubkey: userTokenAddress });
+        vaultTokenAddress = pool.vault.getAuthorityTokenAddress(mintAddress, tokenProgramId);
+      }
+
+      vaultRemainingAccounts.push({ isSigner: false, isWritable: true, pubkey: vaultTokenAddress });
+      index++;
+    }
+
+    // Build the main deposit instruction
+    instructions.push(
+      await this.program.methods
+        .deposit(
+          amounts.map((amount, index) =>
+            SafeAmount.toU64Amount(
+              amount,
+              pool.data.tokens.find((data) => data.mint.equals(mintAddresses[index]))!.decimals,
+            ),
+          ),
+          SafeAmount.toU64Amount(minimumAmountOut, WeightedPool.POOL_TOKEN_DECIMALS),
+        )
+        .accountsStrict({
+          user: owner,
+          userPoolToken: userPoolTokenAddress,
+          mint: pool.mintAddress,
+          pool: pool.address,
+          poolAuthority: pool.authorityAddress,
+          vault: pool.vault.address,
+          vaultAuthority: pool.vault.authorityAddress,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram2022: TOKEN_2022_PROGRAM_ID,
+        })
+        .remainingAccounts([
+          ...userRemainingAccounts,
+          ...vaultRemainingAccounts,
+          ...mintAddresses.map((pubkey) => ({ isSigner: false, isWritable: false, pubkey })),
+        ])
+        .instruction(),
+    );
+
+    // Cleanup: close temporary wrapped SOL account
+    if (signers.length) {
+      instructions.push(this.closeTokenAccountInstruction(signers[0].publicKey));
+    }
+
+    return {
+      instructions,
+      signers,
+      userPoolTokenAddress,
+    };
+  }
+
   async deposit({
     pool,
     mintAddresses,
