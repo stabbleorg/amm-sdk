@@ -9,7 +9,7 @@
     "@solana/spl-token": "^0.4.13",
     "@solana/web3.js": "^1.98.0",
     "@stabbleorg/amm-sdk": "^2.1.2",
-    "@stabbleorg/anchor-contrib": "^2.1.6",
+    "@stabbleorg/anchor-contrib": "^2.6.0",
     "bs58": "^5.0.0",
     "helius-sdk": "^1.4.2"
   }
