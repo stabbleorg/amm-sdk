@@ -129,7 +129,6 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
       const { instruction: createVaultTokenInstruction } = await this.getOrCreateAssociatedTokenAddressInstruction(
         mintAddress,
         vault.authorityAddress,
-        true,
         tokenProgramId,
       );
       if (createVaultTokenInstruction) instructions.push(createVaultTokenInstruction);
@@ -138,7 +137,6 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
         await this.getOrCreateAssociatedTokenAddressInstruction(
           mintAddress,
           vault.beneficiaryAddress,
-          true,
           tokenProgramId,
         );
       if (createBeneficiaryTokenInstruction) instructions.push(createBeneficiaryTokenInstruction);
@@ -191,7 +189,7 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
 export class VaultListener {
   private _listener?: number;
 
-  constructor(readonly program: VaultProgram) {}
+  constructor(readonly program: VaultProgram) { }
 
   addVaultListener(callback: (event: DataUpdatedEvent<Partial<VaultData>>) => void) {
     this.removeVaultListener();
