@@ -441,7 +441,6 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
           await this.getOrCreateAssociatedTokenAddressInstruction(
             mintAddress,
             this.walletAddress,
-            false,
             tokenProgramId,
           );
         if (createUserTokenInstruction) instructions.push(createUserTokenInstruction);
@@ -459,11 +458,11 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
           SafeAmount.toU64Amount(amount, WeightedPool.POOL_TOKEN_DECIMALS),
           minimumAmountsOut !== undefined
             ? minimumAmountsOut.map((amount, index) =>
-                SafeAmount.toU64Amount(
-                  amount,
-                  pool.data.tokens.find((data) => data.mint.equals(mintAddresses[index]))!.decimals,
-                ),
-              )
+              SafeAmount.toU64Amount(
+                amount,
+                pool.data.tokens.find((data) => data.mint.equals(mintAddresses[index]))!.decimals,
+              ),
+            )
             : Array(mintAddresses.length).fill(new BN(0)),
         )
         .accountsStrict({
@@ -602,7 +601,6 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
         await this.getOrCreateAssociatedTokenAddressInstruction(
           mintInAddress,
           this.walletAddress,
-          true,
           tokenInProgramId,
         );
       if (createUserTokenInstruction) {
@@ -619,7 +617,6 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
         await this.getOrCreateAssociatedTokenAddressInstruction(
           mintOutAddress,
           this.walletAddress,
-          true,
           tokenOutProgramId,
         );
       if (createUserTokenInstruction) {
@@ -737,7 +734,7 @@ export class WeightedSwapListener {
   private _poolUpdatedListener?: number;
   private _poolBalancesUpdatedListener?: number;
 
-  constructor(readonly program: WeightedSwapProgram) {}
+  constructor(readonly program: WeightedSwapProgram) { }
 
   addPoolListener(callback: (event: DataUpdatedEvent<Partial<WeightedPoolData>>) => void) {
     this.removePoolListener();
