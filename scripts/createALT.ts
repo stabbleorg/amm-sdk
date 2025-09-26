@@ -2,7 +2,7 @@ import fs from "fs";
 import { AddressLookupTableProgram, Connection, Keypair, PublicKey, SystemProgram, Transaction, TransactionInstruction, TransactionMessage, VersionedTransaction } from "@solana/web3.js"
 
 // const RPC_URL = "https://api.devnet.solana.com"
-const RPC_URL = "https://quaint-wiser-resonance.solana-mainnet.quiknode.pro/3c3a869155d61980c33b2ef3ac0bb8579e38788a/"
+const RPC_URL = "https://api.mainnet-beta.solana.com"
 const KP_FPATH = "alt_admin.json"
 
 const TABLE_ADDRESS = "6BjuNU4HzNBevtXDJveiHHRF9D4QWucjxLpUwo4VsNfF"
