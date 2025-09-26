@@ -439,7 +439,6 @@ export class StableSwapContext<T extends Provider = Provider> extends WalletCont
           await this.getOrCreateAssociatedTokenAddressInstruction(
             mintAddress,
             this.walletAddress,
-            false,
             tokenProgramId,
           );
         if (createUserTokenInstruction) instructions.push(createUserTokenInstruction);
@@ -457,11 +456,11 @@ export class StableSwapContext<T extends Provider = Provider> extends WalletCont
           SafeAmount.toU64Amount(amount, StablePool.POOL_TOKEN_DECIMALS),
           minimumAmountsOut !== undefined
             ? minimumAmountsOut.map((amount, index) =>
-                SafeAmount.toU64Amount(
-                  amount,
-                  pool.data.tokens.find((data) => data.mint.equals(mintAddresses[index]))!.decimals,
-                ),
-              )
+              SafeAmount.toU64Amount(
+                amount,
+                pool.data.tokens.find((data) => data.mint.equals(mintAddresses[index]))!.decimals,
+              ),
+            )
             : Array(mintAddresses.length).fill(new BN(0)),
         )
         .accountsStrict({
@@ -600,7 +599,6 @@ export class StableSwapContext<T extends Provider = Provider> extends WalletCont
         await this.getOrCreateAssociatedTokenAddressInstruction(
           mintInAddress,
           this.walletAddress,
-          true,
           tokenInProgramId,
         );
       if (createUserTokenInstruction) {
@@ -617,7 +615,6 @@ export class StableSwapContext<T extends Provider = Provider> extends WalletCont
         await this.getOrCreateAssociatedTokenAddressInstruction(
           mintOutAddress,
           this.walletAddress,
-          true,
           tokenOutProgramId,
         );
       if (createUserTokenInstruction) {
@@ -854,7 +851,7 @@ export class StableSwapListener {
   private _poolUpdatedListener?: number;
   private _poolBalancesUpdatedListener?: number;
 
-  constructor(readonly program: StableSwapProgram) {}
+  constructor(readonly program: StableSwapProgram) { }
 
   addPoolListener(callback: (event: DataUpdatedEvent<Partial<StablePoolData>>) => void) {
     this.removePoolListener();
