@@ -47,7 +47,9 @@ export const WEIGHTED_SWAP_PROGRAM_ID = new PublicKey(IDL.address);
 
 export type WeightedSwapProgram = Program<IDLType>;
 
-export class WeightedSwapContext<T extends Provider = Provider> extends WalletContext<T> {
+export class WeightedSwapContext<
+  T extends Provider = Provider,
+> extends WalletContext<T> {
   readonly program: WeightedSwapProgram;
 
   constructor(provider: T) {
@@ -75,7 +77,163 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
         },
       },
     ]);
-    return accounts.map((data) => new WeightedPool(vault, data.publicKey, data.account));
+    return accounts.map(
+      (data) => new WeightedPool(vault, data.publicKey, data.account),
+    );
+  }
+
+  /**
+   * Build initialize instructions.
+   *
+   * @returns Instructions array, signers, pool address, and pool mint address
+   */
+  async buildInitializeInstructions({
+    vault,
+    keypair = Keypair.generate(),
+    poolMintKP = Keypair.generate(),
+    mintAddresses,
+    maxCaps,
+    weights,
+    swapFee,
+    name = "",
+    symbol = "",
+    uri = "",
+    owner = this.walletAddress,
+  }: {
+    vault: Vault;
+    keypair?: Keypair;
+    poolMintKP?: Keypair;
+    mintAddresses: PublicKey[];
+    maxCaps?: FloatLike[];
+    weights: FloatLike[];
+    swapFee: FloatLike;
+    name?: string;
+    symbol?: string;
+    uri?: string;
+    owner?: PublicKey;
+  }): Promise<{
+    instructions: TransactionInstruction[];
+    signers: Keypair[];
+    poolAddress: PublicKey;
+    poolMintAddress: PublicKey;
+  }> {
+    // https://www.anchor-lang.com/docs/references/space#type-chart
+    const size =
+      this.program.account.pool.size +
+      (4 + WeightedPool.POOL_TOKEN_SIZE * mintAddresses.length) +
+      8;
+    const poolAuthorityAddress = WeightedPool.getAuthorityAddress(
+      keypair.publicKey,
+    );
+    const mintAccounts =
+      await this.provider.connection.getMultipleAccountsInfo(mintAddresses);
+    const mints = mintAccounts.map((account, index) =>
+      unpackMint(mintAddresses[index], account!, account!.owner),
+    );
+
+    const [metadataAddress] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("metadata"),
+        MPL_TOKEN_METADATA_PROGRAM_ID.toBytes(),
+        poolMintKP.publicKey.toBytes(),
+      ],
+      MPL_TOKEN_METADATA_PROGRAM_ID,
+    );
+
+    const instructions: TransactionInstruction[] = [
+      SystemProgram.createAccount({
+        fromPubkey: owner,
+        newAccountPubkey: poolMintKP.publicKey,
+        space: MintLayout.span,
+        lamports: TOKEN_MINT_RENT_FEE_LAMPORTS,
+        programId: TOKEN_PROGRAM_ID,
+      }),
+      createInitializeMint2Instruction(
+        poolMintKP.publicKey,
+        WeightedPool.POOL_TOKEN_DECIMALS,
+        owner,
+        owner,
+      ),
+      createCreateMetadataAccountV3Instruction(
+        {
+          metadata: metadataAddress,
+          mint: poolMintKP.publicKey,
+          mintAuthority: owner,
+          payer: owner,
+          updateAuthority: owner,
+        },
+        {
+          createMetadataAccountArgsV3: {
+            data: {
+              name,
+              symbol,
+              uri,
+              sellerFeeBasisPoints: 0,
+              creators: null,
+              collection: null,
+              uses: null,
+            },
+            isMutable: true,
+            collectionDetails: null,
+          },
+        },
+      ),
+      createSetAuthorityInstruction(
+        poolMintKP.publicKey,
+        owner,
+        AuthorityType.MintTokens,
+        poolAuthorityAddress,
+      ),
+      createSetAuthorityInstruction(
+        poolMintKP.publicKey,
+        owner,
+        AuthorityType.FreezeAccount,
+        null,
+      ),
+      SystemProgram.createAccount({
+        fromPubkey: owner,
+        newAccountPubkey: keypair.publicKey,
+        space: size,
+        lamports:
+          await this.provider.connection.getMinimumBalanceForRentExemption(
+            size,
+          ),
+        programId: this.program.programId,
+      }),
+      await this.program.methods
+        .initialize(
+          SafeAmount.toGiga(swapFee),
+          weights.map((weight) => SafeAmount.toGiga(weight)),
+          mints.map((mint, index) =>
+            maxCaps
+              ? SafeAmount.toU64Amount(maxCaps[index], mint.decimals)
+              : new BN(mint.supply.toString()),
+          ),
+        )
+        .accountsStrict({
+          owner: owner,
+          mint: poolMintKP.publicKey,
+          pool: keypair.publicKey,
+          poolAuthority: poolAuthorityAddress,
+          withdrawAuthority: vault.withdrawAuthorityAddress,
+          vault: vault.address,
+        })
+        .remainingAccounts(
+          mintAddresses.map((pubkey) => ({
+            isSigner: false,
+            isWritable: false,
+            pubkey,
+          })),
+        )
+        .instruction(),
+    ];
+
+    return {
+      instructions,
+      signers: [keypair, poolMintKP],
+      poolAddress: keypair.publicKey,
+      poolMintAddress: poolMintKP.publicKey,
+    };
   }
 
   async initialize({
@@ -105,99 +263,31 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
     symbol?: string;
     uri?: string;
   }>): Promise<AddressWithTransactionSignature> {
-    // https://www.anchor-lang.com/docs/references/space#type-chart
-    const size = this.program.account.pool.size + (4 + WeightedPool.POOL_TOKEN_SIZE * mintAddresses.length) + 8;
-    const poolAuthorityAddress = WeightedPool.getAuthorityAddress(keypair.publicKey);
-    const mintAccounts = await this.provider.connection.getMultipleAccountsInfo(mintAddresses);
-    const mints = mintAccounts.map((account, index) => unpackMint(mintAddresses[index], account!, account!.owner));
-
-    const [metadataAddress] = PublicKey.findProgramAddressSync(
-      [Buffer.from("metadata"), MPL_TOKEN_METADATA_PROGRAM_ID.toBytes(), poolMintKP.publicKey.toBytes()],
-      MPL_TOKEN_METADATA_PROGRAM_ID,
-    );
-
-    const instructions: TransactionInstruction[] = [
-      SystemProgram.createAccount({
-        fromPubkey: this.walletAddress,
-        newAccountPubkey: poolMintKP.publicKey,
-        space: MintLayout.span,
-        lamports: TOKEN_MINT_RENT_FEE_LAMPORTS,
-        programId: TOKEN_PROGRAM_ID,
-      }),
-      createInitializeMint2Instruction(
-        poolMintKP.publicKey,
-        WeightedPool.POOL_TOKEN_DECIMALS,
-        this.walletAddress,
-        this.walletAddress,
-      ),
-      createCreateMetadataAccountV3Instruction(
-        {
-          metadata: metadataAddress,
-          mint: poolMintKP.publicKey,
-          mintAuthority: this.walletAddress,
-          payer: this.walletAddress,
-          updateAuthority: this.walletAddress,
-        },
-        {
-          createMetadataAccountArgsV3: {
-            data: {
-              name,
-              symbol,
-              uri,
-              sellerFeeBasisPoints: 0,
-              creators: null,
-              collection: null,
-              uses: null,
-            },
-            isMutable: true,
-            collectionDetails: null,
-          },
-        },
-      ),
-      createSetAuthorityInstruction(
-        poolMintKP.publicKey,
-        this.walletAddress,
-        AuthorityType.MintTokens,
-        poolAuthorityAddress,
-      ),
-      createSetAuthorityInstruction(poolMintKP.publicKey, this.walletAddress, AuthorityType.FreezeAccount, null),
-      SystemProgram.createAccount({
-        fromPubkey: this.walletAddress,
-        newAccountPubkey: keypair.publicKey,
-        space: size,
-        lamports: await this.provider.connection.getMinimumBalanceForRentExemption(size),
-        programId: this.program.programId,
-      }),
-      await this.program.methods
-        .initialize(
-          SafeAmount.toGiga(swapFee),
-          weights.map((weight) => SafeAmount.toGiga(weight)),
-          mints.map((mint, index) =>
-            maxCaps ? SafeAmount.toU64Amount(maxCaps[index], mint.decimals) : new BN(mint.supply.toString()),
-          ),
-        )
-        .accountsStrict({
-          owner: this.walletAddress,
-          mint: poolMintKP.publicKey,
-          pool: keypair.publicKey,
-          poolAuthority: poolAuthorityAddress,
-          withdrawAuthority: vault.withdrawAuthorityAddress,
-          vault: vault.address,
-        })
-        .remainingAccounts(mintAddresses.map((pubkey) => ({ isSigner: false, isWritable: false, pubkey })))
-        .instruction(),
-    ];
+    const { instructions, signers, poolAddress } =
+      await this.buildInitializeInstructions({
+        vault,
+        keypair,
+        poolMintKP,
+        mintAddresses,
+        maxCaps,
+        weights,
+        swapFee,
+        name,
+        symbol,
+        uri,
+        owner: this.walletAddress,
+      });
 
     const signature = await this.sendSmartTransaction(
       instructions,
-      [keypair, poolMintKP],
+      signers,
       altAccounts,
       priorityLevel,
       maxPriorityMicroLamports,
       simulate,
     );
 
-    return { address: keypair.publicKey, signature };
+    return { address: poolAddress, signature };
   }
 
   async buildDepositInstructions({
@@ -223,9 +313,14 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
     const vaultRemainingAccounts: AccountMeta[] = [];
 
     // Create user's pool token ATA if needed (for receiving LP tokens)
-    const { address: userPoolTokenAddress, instruction: createUserPoolTokenInstruction } =
-      await this.getOrCreateAssociatedTokenAddressInstruction(pool.mintAddress);
-    if (createUserPoolTokenInstruction) instructions.push(createUserPoolTokenInstruction);
+    const {
+      address: userPoolTokenAddress,
+      instruction: createUserPoolTokenInstruction,
+    } = await this.getOrCreateAssociatedTokenAddressInstruction(
+      pool.mintAddress,
+    );
+    if (createUserPoolTokenInstruction)
+      instructions.push(createUserPoolTokenInstruction);
 
     // Process each token to deposit
     let index = 0;
@@ -242,17 +337,36 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
           ...this.createTokenAccountInstructions(keypair.publicKey),
           ...this.transferWSOLInstructions(keypair.publicKey, amounts[index]),
         );
-        userRemainingAccounts.push({ isSigner: false, isWritable: true, pubkey: keypair.publicKey });
+        userRemainingAccounts.push({
+          isSigner: false,
+          isWritable: true,
+          pubkey: keypair.publicKey,
+        });
       } else {
         // For SPL tokens: use user's existing ATA
-        const account = await this.provider.connection.getAccountInfo(mintAddress);
+        const account =
+          await this.provider.connection.getAccountInfo(mintAddress);
         const tokenProgramId = account!.owner;
-        const userTokenAddress = this.getAssociatedTokenAddress(mintAddress, tokenProgramId);
-        userRemainingAccounts.push({ isSigner: false, isWritable: true, pubkey: userTokenAddress });
-        vaultTokenAddress = pool.vault.getAuthorityTokenAddress(mintAddress, tokenProgramId);
+        const userTokenAddress = this.getAssociatedTokenAddress(
+          mintAddress,
+          tokenProgramId,
+        );
+        userRemainingAccounts.push({
+          isSigner: false,
+          isWritable: true,
+          pubkey: userTokenAddress,
+        });
+        vaultTokenAddress = pool.vault.getAuthorityTokenAddress(
+          mintAddress,
+          tokenProgramId,
+        );
       }
 
-      vaultRemainingAccounts.push({ isSigner: false, isWritable: true, pubkey: vaultTokenAddress });
+      vaultRemainingAccounts.push({
+        isSigner: false,
+        isWritable: true,
+        pubkey: vaultTokenAddress,
+      });
       index++;
     }
 
@@ -263,10 +377,15 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
           amounts.map((amount, index) =>
             SafeAmount.toU64Amount(
               amount,
-              pool.data.tokens.find((data) => data.mint.equals(mintAddresses[index]))!.decimals,
+              pool.data.tokens.find((data) =>
+                data.mint.equals(mintAddresses[index]),
+              )!.decimals,
             ),
           ),
-          SafeAmount.toU64Amount(minimumAmountOut, WeightedPool.POOL_TOKEN_DECIMALS),
+          SafeAmount.toU64Amount(
+            minimumAmountOut,
+            WeightedPool.POOL_TOKEN_DECIMALS,
+          ),
         )
         .accountsStrict({
           user: owner,
@@ -282,14 +401,20 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
         .remainingAccounts([
           ...userRemainingAccounts,
           ...vaultRemainingAccounts,
-          ...mintAddresses.map((pubkey) => ({ isSigner: false, isWritable: false, pubkey })),
+          ...mintAddresses.map((pubkey) => ({
+            isSigner: false,
+            isWritable: false,
+            pubkey,
+          })),
         ])
         .instruction(),
     );
 
     // Cleanup: close temporary wrapped SOL account
     if (signers.length) {
-      instructions.push(this.closeTokenAccountInstruction(signers[0].publicKey));
+      instructions.push(
+        this.closeTokenAccountInstruction(signers[0].publicKey),
+      );
     }
 
     return {
@@ -330,9 +455,14 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
       }
     }
 
-    const { address: userPoolTokenAddress, instruction: createUserPoolTokenInstruction } =
-      await this.getOrCreateAssociatedTokenAddressInstruction(pool.mintAddress);
-    if (createUserPoolTokenInstruction) instructions.push(createUserPoolTokenInstruction);
+    const {
+      address: userPoolTokenAddress,
+      instruction: createUserPoolTokenInstruction,
+    } = await this.getOrCreateAssociatedTokenAddressInstruction(
+      pool.mintAddress,
+    );
+    if (createUserPoolTokenInstruction)
+      instructions.push(createUserPoolTokenInstruction);
 
     let index = 0;
     for (const mintAddress of mintAddresses) {
@@ -345,18 +475,37 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
           ...this.createTokenAccountInstructions(keypair.publicKey),
           ...this.transferWSOLInstructions(keypair.publicKey, amounts[index]),
         );
-        userRemainingAccounts.push({ isSigner: false, isWritable: true, pubkey: keypair.publicKey });
+        userRemainingAccounts.push({
+          isSigner: false,
+          isWritable: true,
+          pubkey: keypair.publicKey,
+        });
       } else {
-        const account = await this.provider.connection.getAccountInfo(mintAddress);
+        const account =
+          await this.provider.connection.getAccountInfo(mintAddress);
         const tokenProgramId = account!.owner;
 
-        const userTokenAddress = this.getAssociatedTokenAddress(mintAddress, tokenProgramId);
-        userRemainingAccounts.push({ isSigner: false, isWritable: true, pubkey: userTokenAddress });
+        const userTokenAddress = this.getAssociatedTokenAddress(
+          mintAddress,
+          tokenProgramId,
+        );
+        userRemainingAccounts.push({
+          isSigner: false,
+          isWritable: true,
+          pubkey: userTokenAddress,
+        });
 
-        vaultTokenAddress = pool.vault.getAuthorityTokenAddress(mintAddress, tokenProgramId);
+        vaultTokenAddress = pool.vault.getAuthorityTokenAddress(
+          mintAddress,
+          tokenProgramId,
+        );
       }
 
-      vaultRemainingAccounts.push({ isSigner: false, isWritable: true, pubkey: vaultTokenAddress });
+      vaultRemainingAccounts.push({
+        isSigner: false,
+        isWritable: true,
+        pubkey: vaultTokenAddress,
+      });
 
       index++;
     }
@@ -367,10 +516,15 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
           amounts.map((amount, index) =>
             SafeAmount.toU64Amount(
               amount,
-              pool.data.tokens.find((data) => data.mint.equals(mintAddresses[index]))!.decimals,
+              pool.data.tokens.find((data) =>
+                data.mint.equals(mintAddresses[index]),
+              )!.decimals,
             ),
           ),
-          SafeAmount.toU64Amount(minimumAmountOut, WeightedPool.POOL_TOKEN_DECIMALS),
+          SafeAmount.toU64Amount(
+            minimumAmountOut,
+            WeightedPool.POOL_TOKEN_DECIMALS,
+          ),
         )
         .accountsStrict({
           user: this.walletAddress,
@@ -386,12 +540,19 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
         .remainingAccounts([
           ...userRemainingAccounts,
           ...vaultRemainingAccounts,
-          ...mintAddresses.map((pubkey) => ({ isSigner: false, isWritable: false, pubkey })),
+          ...mintAddresses.map((pubkey) => ({
+            isSigner: false,
+            isWritable: false,
+            pubkey,
+          })),
         ])
         .instruction(),
     );
 
-    if (signers.length) instructions.push(this.closeTokenAccountInstruction(signers[0].publicKey));
+    if (signers.length)
+      instructions.push(
+        this.closeTokenAccountInstruction(signers[0].publicKey),
+      );
 
     return this.sendSmartTransaction(
       instructions,
@@ -423,7 +584,9 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
     const userRemainingAccounts: AccountMeta[] = [];
     const vaultRemainingAccounts: AccountMeta[] = [];
 
-    const userPoolTokenAddress = this.getAssociatedTokenAddress(pool.mintAddress);
+    const userPoolTokenAddress = this.getAssociatedTokenAddress(
+      pool.mintAddress,
+    );
 
     for (const mintAddress of mintAddresses) {
       let vaultTokenAddress = pool.vault.getAuthorityTokenAddress(mintAddress);
@@ -431,25 +594,49 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
       if (mintAddress.equals(NATIVE_MINT)) {
         const keypair = Keypair.generate();
         signers.push(keypair);
-        instructions.push(...this.createTokenAccountInstructions(keypair.publicKey, mintAddress));
-        userRemainingAccounts.push({ isSigner: false, isWritable: true, pubkey: keypair.publicKey });
+        instructions.push(
+          ...this.createTokenAccountInstructions(
+            keypair.publicKey,
+            mintAddress,
+          ),
+        );
+        userRemainingAccounts.push({
+          isSigner: false,
+          isWritable: true,
+          pubkey: keypair.publicKey,
+        });
       } else {
-        const account = await this.provider.connection.getAccountInfo(mintAddress);
+        const account =
+          await this.provider.connection.getAccountInfo(mintAddress);
         const tokenProgramId = account!.owner;
 
-        const { address: userTokenAddress, instruction: createUserTokenInstruction } =
-          await this.getOrCreateAssociatedTokenAddressInstruction(
-            mintAddress,
-            this.walletAddress,
-            tokenProgramId,
-          );
-        if (createUserTokenInstruction) instructions.push(createUserTokenInstruction);
-        userRemainingAccounts.push({ isSigner: false, isWritable: true, pubkey: userTokenAddress });
+        const {
+          address: userTokenAddress,
+          instruction: createUserTokenInstruction,
+        } = await this.getOrCreateAssociatedTokenAddressInstruction(
+          mintAddress,
+          this.walletAddress,
+          tokenProgramId,
+        );
+        if (createUserTokenInstruction)
+          instructions.push(createUserTokenInstruction);
+        userRemainingAccounts.push({
+          isSigner: false,
+          isWritable: true,
+          pubkey: userTokenAddress,
+        });
 
-        vaultTokenAddress = pool.vault.getAuthorityTokenAddress(mintAddress, tokenProgramId);
+        vaultTokenAddress = pool.vault.getAuthorityTokenAddress(
+          mintAddress,
+          tokenProgramId,
+        );
       }
 
-      vaultRemainingAccounts.push({ isSigner: false, isWritable: true, pubkey: vaultTokenAddress });
+      vaultRemainingAccounts.push({
+        isSigner: false,
+        isWritable: true,
+        pubkey: vaultTokenAddress,
+      });
     }
 
     instructions.push(
@@ -458,11 +645,13 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
           SafeAmount.toU64Amount(amount, WeightedPool.POOL_TOKEN_DECIMALS),
           minimumAmountsOut !== undefined
             ? minimumAmountsOut.map((amount, index) =>
-              SafeAmount.toU64Amount(
-                amount,
-                pool.data.tokens.find((data) => data.mint.equals(mintAddresses[index]))!.decimals,
-              ),
-            )
+                SafeAmount.toU64Amount(
+                  amount,
+                  pool.data.tokens.find((data) =>
+                    data.mint.equals(mintAddresses[index]),
+                  )!.decimals,
+                ),
+              )
             : Array(mintAddresses.length).fill(new BN(0)),
         )
         .accountsStrict({
@@ -480,12 +669,19 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
         .remainingAccounts([
           ...userRemainingAccounts,
           ...vaultRemainingAccounts,
-          ...mintAddresses.map((pubkey) => ({ isSigner: false, isWritable: false, pubkey })),
+          ...mintAddresses.map((pubkey) => ({
+            isSigner: false,
+            isWritable: false,
+            pubkey,
+          })),
         ])
         .instruction(),
     );
 
-    if (signers.length) instructions.push(this.closeTokenAccountInstruction(signers[0].publicKey));
+    if (signers.length)
+      instructions.push(
+        this.closeTokenAccountInstruction(signers[0].publicKey),
+      );
 
     return this.sendSmartTransaction(
       instructions,
@@ -530,7 +726,12 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
 
       const keypair = Keypair.generate();
       signers.push(keypair);
-      instructions.push(...this.createTokenAccountInstructions(keypair.publicKey, mintOutAddress));
+      instructions.push(
+        ...this.createTokenAccountInstructions(
+          keypair.publicKey,
+          mintOutAddress,
+        ),
+      );
       signers.push(keypair);
       tokenOutAddress = keypair.publicKey;
     }
@@ -550,8 +751,10 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
     );
 
     // close intermediate WSOL token accounts
-    if (tokenInAddress) instructions.push(this.closeTokenAccountInstruction(tokenInAddress));
-    if (tokenOutAddress) instructions.push(this.closeTokenAccountInstruction(tokenOutAddress));
+    if (tokenInAddress)
+      instructions.push(this.closeTokenAccountInstruction(tokenInAddress));
+    if (tokenOutAddress)
+      instructions.push(this.closeTokenAccountInstruction(tokenOutAddress));
 
     return this.sendSmartTransaction(
       instructions,
@@ -574,19 +777,25 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
     amountIn,
     minimumAmountOut,
   }: SwapInstructionArgs): Promise<TransactionInstruction[]> {
-    const tokenIn = pool.tokens.find((token) => token.mintAddress.equals(mintInAddress));
+    const tokenIn = pool.tokens.find((token) =>
+      token.mintAddress.equals(mintInAddress),
+    );
     if (!tokenIn) throw Error("Path not found");
-    const tokenOut = pool.tokens.find((token) => token.mintAddress.equals(mintOutAddress));
+    const tokenOut = pool.tokens.find((token) =>
+      token.mintAddress.equals(mintOutAddress),
+    );
     if (!tokenOut) throw Error("Path not found");
 
     if (!tokenInProgramId) {
-      const mintIn = await this.provider.connection.getAccountInfo(mintInAddress);
+      const mintIn =
+        await this.provider.connection.getAccountInfo(mintInAddress);
       if (!mintIn) throw Error("Invalid token input");
       tokenInProgramId = mintIn.owner;
     }
 
     if (!tokenOutProgramId) {
-      const mintOut = await this.provider.connection.getAccountInfo(mintOutAddress);
+      const mintOut =
+        await this.provider.connection.getAccountInfo(mintOutAddress);
       if (!mintOut) throw Error("Invalid token input");
       tokenOutProgramId = mintOut.owner;
     }
@@ -597,12 +806,14 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
     if (tokenInAddress) {
       userTokenInAddress = tokenInAddress;
     } else {
-      const { address: userTokenAddress, instruction: createUserTokenInstruction } =
-        await this.getOrCreateAssociatedTokenAddressInstruction(
-          mintInAddress,
-          this.walletAddress,
-          tokenInProgramId,
-        );
+      const {
+        address: userTokenAddress,
+        instruction: createUserTokenInstruction,
+      } = await this.getOrCreateAssociatedTokenAddressInstruction(
+        mintInAddress,
+        this.walletAddress,
+        tokenInProgramId,
+      );
       if (createUserTokenInstruction) {
         instructions.push(createUserTokenInstruction);
       }
@@ -613,12 +824,14 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
     if (tokenOutAddress) {
       userTokenOutAddress = tokenOutAddress;
     } else {
-      const { address: userTokenAddress, instruction: createUserTokenInstruction } =
-        await this.getOrCreateAssociatedTokenAddressInstruction(
-          mintOutAddress,
-          this.walletAddress,
-          tokenOutProgramId,
-        );
+      const {
+        address: userTokenAddress,
+        instruction: createUserTokenInstruction,
+      } = await this.getOrCreateAssociatedTokenAddressInstruction(
+        mintOutAddress,
+        this.walletAddress,
+        tokenOutProgramId,
+      );
       if (createUserTokenInstruction) {
         instructions.push(createUserTokenInstruction);
       }
@@ -628,8 +841,13 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
     instructions.push(
       await this.program.methods
         .swapV2(
-          amountIn ? SafeAmount.toU64Amount(amountIn, tokenIn.balance.decimals) : null,
-          SafeAmount.toU64Amount(minimumAmountOut || 0, tokenOut.balance.decimals),
+          amountIn
+            ? SafeAmount.toU64Amount(amountIn, tokenIn.balance.decimals)
+            : null,
+          SafeAmount.toU64Amount(
+            minimumAmountOut || 0,
+            tokenOut.balance.decimals,
+          ),
         )
         .accountsStrict({
           user: this.walletAddress,
@@ -637,9 +855,18 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
           mintOut: mintOutAddress,
           userTokenIn: userTokenInAddress,
           userTokenOut: userTokenOutAddress,
-          vaultTokenIn: pool.vault.getAuthorityTokenAddress(mintInAddress, tokenInProgramId),
-          vaultTokenOut: pool.vault.getAuthorityTokenAddress(mintOutAddress, tokenOutProgramId),
-          beneficiaryTokenOut: pool.vault.getBeneficiaryTokenAddress(mintOutAddress, tokenOutProgramId),
+          vaultTokenIn: pool.vault.getAuthorityTokenAddress(
+            mintInAddress,
+            tokenInProgramId,
+          ),
+          vaultTokenOut: pool.vault.getAuthorityTokenAddress(
+            mintOutAddress,
+            tokenOutProgramId,
+          ),
+          beneficiaryTokenOut: pool.vault.getBeneficiaryTokenAddress(
+            mintOutAddress,
+            tokenOutProgramId,
+          ),
           pool: pool.address,
           withdrawAuthority: pool.vault.withdrawAuthorityAddress,
           vault: pool.vault.address,
@@ -661,7 +888,10 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
     priorityLevel,
     maxPriorityMicroLamports,
     simulate,
-  }: TransactionArgs<{ pool: WeightedPool; swapFee: FloatLike }>): Promise<TransactionSignature> {
+  }: TransactionArgs<{
+    pool: WeightedPool;
+    swapFee: FloatLike;
+  }>): Promise<TransactionSignature> {
     const instruction = await this.program.methods
       .changeSwapFee(SafeAmount.toGiga(swapFee))
       .accountsStrict({
@@ -670,7 +900,14 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
       })
       .instruction();
 
-    return this.sendSmartTransaction([instruction], [], altAccounts, priorityLevel, maxPriorityMicroLamports, simulate);
+    return this.sendSmartTransaction(
+      [instruction],
+      [],
+      altAccounts,
+      priorityLevel,
+      maxPriorityMicroLamports,
+      simulate,
+    );
   }
 
   async changeMaxSupply({
@@ -680,16 +917,28 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
     priorityLevel,
     maxPriorityMicroLamports,
     simulate,
-  }: TransactionArgs<{ pool: WeightedPool; maxSupply: FloatLike }>): Promise<TransactionSignature> {
+  }: TransactionArgs<{
+    pool: WeightedPool;
+    maxSupply: FloatLike;
+  }>): Promise<TransactionSignature> {
     const instruction = await this.program.methods
-      .changeMaxSupply(SafeAmount.toU64Amount(maxSupply, WeightedPool.POOL_TOKEN_DECIMALS))
+      .changeMaxSupply(
+        SafeAmount.toU64Amount(maxSupply, WeightedPool.POOL_TOKEN_DECIMALS),
+      )
       .accountsStrict({
         owner: this.walletAddress,
         pool: pool.address,
       })
       .instruction();
 
-    return this.sendSmartTransaction([instruction], [], altAccounts, priorityLevel, maxPriorityMicroLamports, simulate);
+    return this.sendSmartTransaction(
+      [instruction],
+      [],
+      altAccounts,
+      priorityLevel,
+      maxPriorityMicroLamports,
+      simulate,
+    );
   }
 
   async shutdown({
@@ -707,7 +956,14 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
       })
       .instruction();
 
-    return this.sendSmartTransaction([instruction], [], altAccounts, priorityLevel, maxPriorityMicroLamports, simulate);
+    return this.sendSmartTransaction(
+      [instruction],
+      [],
+      altAccounts,
+      priorityLevel,
+      maxPriorityMicroLamports,
+      simulate,
+    );
   }
 
   async transferOwner({
@@ -717,7 +973,10 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
     priorityLevel,
     maxPriorityMicroLamports,
     simulate,
-  }: TransactionArgs<{ pool: WeightedPool; ownerAddress: PublicKey }>): Promise<TransactionSignature> {
+  }: TransactionArgs<{
+    pool: WeightedPool;
+    ownerAddress: PublicKey;
+  }>): Promise<TransactionSignature> {
     const instruction = await this.program.methods
       .transferOwner(ownerAddress)
       .accountsStrict({
@@ -726,7 +985,14 @@ export class WeightedSwapContext<T extends Provider = Provider> extends WalletCo
       })
       .instruction();
 
-    return this.sendSmartTransaction([instruction], [], altAccounts, priorityLevel, maxPriorityMicroLamports, simulate);
+    return this.sendSmartTransaction(
+      [instruction],
+      [],
+      altAccounts,
+      priorityLevel,
+      maxPriorityMicroLamports,
+      simulate,
+    );
   }
 }
 
@@ -734,14 +1000,20 @@ export class WeightedSwapListener {
   private _poolUpdatedListener?: number;
   private _poolBalancesUpdatedListener?: number;
 
-  constructor(readonly program: WeightedSwapProgram) { }
+  constructor(readonly program: WeightedSwapProgram) {}
 
-  addPoolListener(callback: (event: DataUpdatedEvent<Partial<WeightedPoolData>>) => void) {
+  addPoolListener(
+    callback: (event: DataUpdatedEvent<Partial<WeightedPoolData>>) => void,
+  ) {
     this.removePoolListener();
 
     this._poolUpdatedListener = this.program.addEventListener(
       "poolUpdatedEvent",
-      (event: DataUpdatedEvent<Partial<WeightedPoolData>>, _slot: number, signature: TransactionSignature) => {
+      (
+        event: DataUpdatedEvent<Partial<WeightedPoolData>>,
+        _slot: number,
+        signature: TransactionSignature,
+      ) => {
         if (signature !== SIMULATED_SIGNATURE) {
           callback(event);
         }
@@ -750,7 +1022,11 @@ export class WeightedSwapListener {
 
     this._poolBalancesUpdatedListener = this.program.addEventListener(
       "poolBalanceUpdatedEvent",
-      (event: DataUpdatedEvent<{ balances: BN[] }>, _slot: number, signature: TransactionSignature) => {
+      (
+        event: DataUpdatedEvent<{ balances: BN[] }>,
+        _slot: number,
+        signature: TransactionSignature,
+      ) => {
         if (event.data && signature !== SIMULATED_SIGNATURE) {
           callback({
             pubkey: event.pubkey,
