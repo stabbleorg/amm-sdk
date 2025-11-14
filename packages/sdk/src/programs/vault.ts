@@ -1,5 +1,11 @@
 import { Program, Provider } from "@coral-xyz/anchor";
-import { Keypair, PublicKey, SystemProgram, TransactionInstruction, TransactionSignature } from "@solana/web3.js";
+import {
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  TransactionInstruction,
+  TransactionSignature,
+} from "@solana/web3.js";
 import {
   DataUpdatedEvent,
   SIMULATED_SIGNATURE,
@@ -18,7 +24,9 @@ import IDL from "../generated/idl/vault.json";
  */
 export const AMM_VAULT_ID = new PublicKey(IDL.address);
 export const AMM_VAULT_PROGRAM_ID = new PublicKey(IDL.address);
-export const AMM_ERRORS = new Map(IDL.errors.map((error) => [error.code, error.msg]));
+export const AMM_ERRORS = new Map(
+  IDL.errors.map((error) => [error.code, error.msg]),
+);
 
 export type VaultProgram = Program<IDLType>;
 
@@ -62,15 +70,13 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
 
     switch (kind) {
       case "stable_swap":
-        [withdrawAuthorityAddress, withdrawAuthorityBump] = StablePool.getWithdrawAuthorityAddressAndBump(
-          keypair.publicKey,
-        );
+        [withdrawAuthorityAddress, withdrawAuthorityBump] =
+          StablePool.getWithdrawAuthorityAddressAndBump(keypair.publicKey);
         break;
       case "weighted_swap":
       default:
-        [withdrawAuthorityAddress, withdrawAuthorityBump] = WeightedPool.getWithdrawAuthorityAddressAndBump(
-          keypair.publicKey,
-        );
+        [withdrawAuthorityAddress, withdrawAuthorityBump] =
+          WeightedPool.getWithdrawAuthorityAddressAndBump(keypair.publicKey);
         break;
     }
 
@@ -79,7 +85,10 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
         fromPubkey: this.walletAddress,
         newAccountPubkey: keypair.publicKey,
         space: this.program.account.vault.size,
-        lamports: await this.provider.connection.getMinimumBalanceForRentExemption(this.program.account.vault.size),
+        lamports:
+          await this.provider.connection.getMinimumBalanceForRentExemption(
+            this.program.account.vault.size,
+          ),
         programId: this.program.programId,
       }),
       await this.program.methods
@@ -109,6 +118,42 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
     return { address: keypair.publicKey, signature };
   }
 
+  async buildCreateMissingTokenAccountsInstructions({
+    vault,
+    mintAddresses,
+  }: {
+    vault: Vault;
+    mintAddresses: PublicKey[];
+  }): Promise<TransactionInstruction[]> {
+    const instructions: TransactionInstruction[] = [];
+    for (const mintAddress of mintAddresses) {
+      const account =
+        await this.provider.connection.getAccountInfo(mintAddress);
+      if (!account) throw Error("Invalid mint address");
+      const tokenProgramId = account.owner;
+
+      const { instruction: createVaultTokenInstruction } =
+        await this.getOrCreateAssociatedTokenAddressInstruction(
+          mintAddress,
+          vault.authorityAddress,
+          tokenProgramId,
+        );
+      if (createVaultTokenInstruction)
+        instructions.push(createVaultTokenInstruction);
+
+      const { instruction: createBeneficiaryTokenInstruction } =
+        await this.getOrCreateAssociatedTokenAddressInstruction(
+          mintAddress,
+          vault.beneficiaryAddress,
+          tokenProgramId,
+        );
+      if (createBeneficiaryTokenInstruction)
+        instructions.push(createBeneficiaryTokenInstruction);
+    }
+
+    return instructions;
+  }
+
   async createMissingTokenAccounts({
     vault,
     mintAddresses,
@@ -120,31 +165,23 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
     vault: Vault;
     mintAddresses: PublicKey[];
   }>): Promise<TransactionSignature | null> {
-    const instructions: TransactionInstruction[] = [];
-    for (const mintAddress of mintAddresses) {
-      const account = await this.provider.connection.getAccountInfo(mintAddress);
-      if (!account) throw Error("Invalid mint address");
-      const tokenProgramId = account.owner;
-
-      const { instruction: createVaultTokenInstruction } = await this.getOrCreateAssociatedTokenAddressInstruction(
-        mintAddress,
-        vault.authorityAddress,
-        tokenProgramId,
-      );
-      if (createVaultTokenInstruction) instructions.push(createVaultTokenInstruction);
-
-      const { instruction: createBeneficiaryTokenInstruction } =
-        await this.getOrCreateAssociatedTokenAddressInstruction(
-          mintAddress,
-          vault.beneficiaryAddress,
-          tokenProgramId,
-        );
-      if (createBeneficiaryTokenInstruction) instructions.push(createBeneficiaryTokenInstruction);
-    }
+    const instructions = await this.buildCreateMissingTokenAccountsInstructions(
+      {
+        vault,
+        mintAddresses,
+      },
+    );
 
     if (!instructions.length) return null;
 
-    return this.sendSmartTransaction(instructions, [], altAccounts, priorityLevel, maxPriorityMicroLamports, simulate);
+    return this.sendSmartTransaction(
+      instructions,
+      [],
+      altAccounts,
+      priorityLevel,
+      maxPriorityMicroLamports,
+      simulate,
+    );
   }
 
   async changeBeneficiary({
@@ -154,7 +191,10 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
     priorityLevel,
     maxPriorityMicroLamports,
     simulate,
-  }: TransactionArgs<{ vault: Vault; beneficiaryAddress: PublicKey }>): Promise<TransactionSignature> {
+  }: TransactionArgs<{
+    vault: Vault;
+    beneficiaryAddress: PublicKey;
+  }>): Promise<TransactionSignature> {
     const instruction = await this.program.methods
       .changeBeneficiary(beneficiaryAddress)
       .accountsStrict({
@@ -163,7 +203,14 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
       })
       .instruction();
 
-    return this.sendSmartTransaction([instruction], [], altAccounts, priorityLevel, maxPriorityMicroLamports, simulate);
+    return this.sendSmartTransaction(
+      [instruction],
+      [],
+      altAccounts,
+      priorityLevel,
+      maxPriorityMicroLamports,
+      simulate,
+    );
   }
 
   async transferAdmin({
@@ -173,7 +220,10 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
     priorityLevel,
     maxPriorityMicroLamports,
     simulate,
-  }: TransactionArgs<{ vault: Vault; adminAddress: PublicKey }>): Promise<TransactionSignature> {
+  }: TransactionArgs<{
+    vault: Vault;
+    adminAddress: PublicKey;
+  }>): Promise<TransactionSignature> {
     const instruction = await this.program.methods
       .transferAdmin(adminAddress)
       .accountsStrict({
@@ -182,20 +232,33 @@ export class VaultContext<T extends Provider> extends WalletContext<T> {
       })
       .instruction();
 
-    return this.sendSmartTransaction([instruction], [], altAccounts, priorityLevel, maxPriorityMicroLamports, simulate);
+    return this.sendSmartTransaction(
+      [instruction],
+      [],
+      altAccounts,
+      priorityLevel,
+      maxPriorityMicroLamports,
+      simulate,
+    );
   }
 }
 
 export class VaultListener {
   private _listener?: number;
 
-  constructor(readonly program: VaultProgram) { }
+  constructor(readonly program: VaultProgram) {}
 
-  addVaultListener(callback: (event: DataUpdatedEvent<Partial<VaultData>>) => void) {
+  addVaultListener(
+    callback: (event: DataUpdatedEvent<Partial<VaultData>>) => void,
+  ) {
     this.removeVaultListener();
     this._listener = this.program.addEventListener(
       "vaultUpdatedEvent",
-      (event: DataUpdatedEvent<Partial<VaultData>>, _slot: number, signature: TransactionSignature) => {
+      (
+        event: DataUpdatedEvent<Partial<VaultData>>,
+        _slot: number,
+        signature: TransactionSignature,
+      ) => {
         if (signature !== SIMULATED_SIGNATURE) {
           callback(event);
         }
