@@ -21,5 +21,6 @@
     "rustfmt": "^0.1.0",
     "ts-mocha": "^10.0.0",
     "typescript": "^5.8.2"
-  }
+  },
+  "version": "2.4.6"
 }
