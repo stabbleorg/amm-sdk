@@ -1,12 +1,9 @@
 {
   "name": "@stabbleorg/amm-sdk",
-  "version": "2.4.6",
+  "version": "2.4.7",
   "main": "src",
   "types": "src/index.d.ts",
   "license": "MIT",
-  "scripts": {
-    "prepublishOnly": "echo \"Building before publish!\" && cd ../.. && yarn build && cd packages/sdk"
-  },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.0",
     "@metaplex-foundation/mpl-token-metadata": "^2.13.0",
