@@ -15,7 +15,7 @@ pub const MAX_SWAP_FEE: u64 = 10_000_000; // 1%
 // Safe max balance supported by stable_math
 pub const MAX_SAFE_BALANCE: u64 = 3_000_000_000_000_000_000; // 3B
 
-pub const INV_THRESHOLD: u64 = 100;
+pub const DEFAULT_INV_THRESHOLD: u64 = 100;
 pub const BALANCE_THRESHOLD: u64 = 1;
 
 pub const MIN_TOKENS: usize = 2;
@@ -30,7 +30,7 @@ pub fn amp_precision_u192() -> U192 {
 // Computes the invariant given the current balances, using the Newton-Raphson approximation.
 // The amplification parameter equals: A n^(n-1)
 // See: https://github.com/stabbleorg/balancer-v2-monorepo/blob/master/pkg/pool-stable/contracts/StableMath.sol#L57-L120
-pub fn calc_invariant(amplification: u64, balances: &Vec<u64>) -> Option<u64> {
+pub fn calc_invariant(amplification: u64, balances: &Vec<u64>, inv_threshold: Option<u64>) -> Option<u64> {
     // invariant                                                                                 //
     // D = invariant                                                  D^(n+1)                    //
     // A = amplification coefficient      A  n^n S + D = A D n^n + -----------                   //
@@ -60,7 +60,8 @@ pub fn calc_invariant(amplification: u64, balances: &Vec<u64>) -> Option<u64> {
         balances_times.push(uint192!(balance.checked_mul(num_tokens_u64)?));
     }
 
-    for _ in 0..255 {
+    let threshold = inv_threshold.unwrap_or(DEFAULT_INV_THRESHOLD);
+    for _ in 0..64 {
         let mut p = invariant;
 
         for &balance_times in balances_times.iter() {
@@ -84,10 +85,10 @@ pub fn calc_invariant(amplification: u64, balances: &Vec<u64>) -> Option<u64> {
         let prev_invariant = prev_invariant.as_u64()?;
 
         if invariant > prev_invariant {
-            if invariant.saturating_sub(prev_invariant) <= INV_THRESHOLD {
+            if invariant.saturating_sub(prev_invariant) <= threshold {
                 return Some(invariant);
             }
-        } else if prev_invariant.saturating_sub(invariant) <= INV_THRESHOLD {
+        } else if prev_invariant.saturating_sub(invariant) <= threshold {
             return Some(invariant);
         }
     }
@@ -185,6 +186,7 @@ pub fn calc_pool_token_out_given_exact_tokens_in(
     pool_token_supply: u64,
     current_invariant: u64,
     swap_fee: u64,
+    inverse_threshold: Option<u64>,
 ) -> Option<u64> {
     // LP out, so we round down overall.
 
@@ -224,7 +226,7 @@ pub fn calc_pool_token_out_given_exact_tokens_in(
         new_balances.push(balances[i].checked_add(amount_in_without_fee)?);
     }
 
-    let new_invariant = calc_invariant(amplification, &new_balances)?;
+    let new_invariant = calc_invariant(amplification, &new_balances, inverse_threshold)?;
     let invariant_ratio = new_invariant.div_down(current_invariant)?;
 
     // If the invariant didn't increase for any reason, we simply don't mint LP
@@ -284,7 +286,7 @@ fn get_token_balance_given_invariant_n_all_other_balances(
     amplification: u64,
     balances: &Vec<u64>,
     invariant: u64,
-    balance: u64, // balance of a given token (token_index)
+    balance: u64 // balance of a given token (token_index)
 ) -> Option<u64> {
     // Rounds result up overall
 
@@ -319,7 +321,7 @@ fn get_token_balance_given_invariant_n_all_other_balances(
     // initial approximation.
     let mut token_balance = invariant_2.checked_add(c)?.checked_div_up(invariant.checked_add(b)?)?;
 
-    for _ in 0..255 {
+    for _ in 0..64 {
         let prev_token_balance = token_balance;
 
         token_balance = token_balance
@@ -359,19 +361,19 @@ mod tests {
             18833762826780,
         ];
         let amplification = 500_000;
-        calc_invariant(amplification, &balances).unwrap();
+        calc_invariant(amplification, &balances, None).unwrap();
 
         let balances = vec![1332693902458055177, 534042038714371533, 93673549035235];
         let amplification = 10_000;
-        calc_invariant(amplification, &balances).unwrap();
+        calc_invariant(amplification, &balances, None).unwrap();
 
         let balances = vec![2397586296768312160, 2300831385038136337, 1410688950371];
         let amplification = 1_000;
-        calc_invariant(amplification, &balances).unwrap();
+        calc_invariant(amplification, &balances, None).unwrap();
 
         let amplification = 5_000_000;
         let balances = vec![40_000_000_000_000_000, 60_000_000_000_000_000];
-        let invariant = calc_invariant(amplification, &balances).unwrap();
+        let invariant = calc_invariant(amplification, &balances, None).unwrap();
         assert_eq!(invariant, 99999583421855646);
 
         let token_amount_in = 100_000_000_000_000;
@@ -382,7 +384,7 @@ mod tests {
 
         let amplification = 750_000;
         let balances = vec![40_000_000_000_000_000, 50_000_000_000_000_000, 60_000_000_000_000_000];
-        let invariant = calc_invariant(amplification, &balances).unwrap();
+        let invariant = calc_invariant(amplification, &balances, None).unwrap();
         assert_eq!(invariant, 149997226126050479);
 
         let amplification = 150_000;
@@ -392,12 +394,12 @@ mod tests {
             60_000_000_000_000_000,
             70_000_000_000_000_000,
         ];
-        let invariant = calc_invariant(amplification, &balances).unwrap();
+        let invariant = calc_invariant(amplification, &balances, None).unwrap();
         assert_eq!(invariant, 219967475585041316);
 
         let amplification = 5_000_000;
         let balances = vec![894_520_800_000_000, 467_581_800_000_000];
-        let invariant = calc_invariant(amplification, &balances).unwrap();
+        let invariant = calc_invariant(amplification, &balances, None).unwrap();
 
         let token_amount_in = 1_000_000_000_000;
         let token_amount_out = calc_out_given_in(amplification, &balances, 0, 1, token_amount_in, invariant).unwrap();
@@ -416,7 +418,7 @@ mod tests {
     fn test_calc_pool_token_out_given_exact_tokens_in() {
         let amplification = 5_000_000;
         let balances = vec![894_520_800_000_000, 467_581_800_000_000];
-        let invariant = calc_invariant(amplification, &balances).unwrap();
+        let invariant = calc_invariant(amplification, &balances, None).unwrap();
 
         let amounts_in = vec![1_000_000_000_000_000, 1_000_000_000_000_000];
         let amount_out = calc_pool_token_out_given_exact_tokens_in(
@@ -426,6 +428,7 @@ mod tests {
             invariant,
             invariant,
             100_000,
+            None,
         )
         .unwrap();
         assert_eq!(amount_out, 1999977982041509);
@@ -438,6 +441,7 @@ mod tests {
             invariant,
             invariant,
             100_000,
+            None,
         )
         .unwrap();
         assert_eq!(amount_out, 2000047447155);
@@ -450,6 +454,7 @@ mod tests {
             invariant,
             invariant,
             100_000,
+            None,
         )
         .unwrap();
         assert!(amount_out < 2000047447155);
@@ -463,6 +468,7 @@ mod tests {
             invariant,
             invariant,
             100_000,
+            None,
         )
         .unwrap();
         assert!(amount_out < 1999994325732);
@@ -474,6 +480,7 @@ mod tests {
             invariant,
             invariant,
             150_000,
+            None,
         )
         .unwrap();
         assert!(amount_out < 1999802271357);
@@ -484,6 +491,7 @@ mod tests {
             invariant,
             invariant,
             50_000,
+            None,
         )
         .unwrap();
         assert!(amount_out > 1999802271357);
@@ -497,6 +505,7 @@ mod tests {
             invariant,
             invariant,
             100_000,
+            None,
         )
         .unwrap();
         assert_eq!(amount_out, 1999977980679);
@@ -507,6 +516,7 @@ mod tests {
             invariant,
             invariant,
             150_000,
+            None,
         )
         .unwrap();
         assert_eq!(amount_out, 1999977980679);
@@ -517,6 +527,7 @@ mod tests {
             invariant,
             invariant,
             50_000,
+            None,
         )
         .unwrap();
         assert_eq!(amount_out, 1999977980679);
@@ -527,6 +538,7 @@ mod tests {
             invariant,
             invariant,
             300_000,
+            None,
         )
         .unwrap();
         assert_eq!(amount_out, 1999977980679);

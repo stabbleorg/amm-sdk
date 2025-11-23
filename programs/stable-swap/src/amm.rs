@@ -92,7 +92,7 @@ impl Amm for StableSwap {
         let current_ts = self.clock_ref.unix_timestamp.load(Ordering::Relaxed);
         let (amount_out, amount_fee) = self
             .state
-            .get_swap_result(current_ts, token_in_index, token_out_index, quote_params.amount)
+            .get_swap_result(current_ts, token_in_index, token_out_index, quote_params.amount, None)
             .unwrap();
 
         Ok(Quote {

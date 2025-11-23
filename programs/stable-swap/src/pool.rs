@@ -236,11 +236,11 @@ impl Pool {
         current_ts: i64,
         token_in_index: usize,
         token_out_index: usize,
-        amount_in: u64,
+        amount_in: u64
     ) -> Option<(u64, u64)> {
         let amplification = self.get_amplification(current_ts)?;
         let balances = self.get_balances();
-        let current_invariant = stable_math::calc_invariant(amplification, &balances)?;
+        let current_invariant = stable_math::calc_invariant(amplification, &balances, None)?;
 
         let wrapped_amount_in = self.calc_wrapped_amount(amount_in, token_in_index)?;
         let wrapped_amount_out_without_fee = stable_math::calc_out_given_in(
