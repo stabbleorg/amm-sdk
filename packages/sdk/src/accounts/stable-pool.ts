@@ -23,7 +23,7 @@ export class StablePool implements Pool<StablePoolData> {
   static MIN_AMP = 1;
   static MAX_AMP = 8000;
 
-  static MIN_SWAP_FEE = 0.00002; // 0.002%
+  static MIN_SWAP_FEE = 0.00001; // 0.001%
   static MAX_SWAP_FEE = 0.01; // 1%
 
   static MAX_TOKENS = 5;
