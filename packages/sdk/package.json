@@ -1,6 +1,6 @@
 {
   "name": "@stabbleorg/amm-sdk",
-  "version": "2.4.8",
+  "version": "2.4.9",
   "main": "src",
   "types": "src/index.d.ts",
   "license": "MIT",
